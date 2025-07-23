@@ -134,7 +134,80 @@ class CommentCreate(BaseModel):
     idea_id: str
     content: str
 
-# Add your routes to the router instead of directly to app
+# Authentication Helper Functions
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except jwt.PyJWTError:
+        raise credentials_exception
+    
+    user = await db.users.find_one({"id": user_id})
+    if user is None:
+        raise credentials_exception
+    return User(**user)
+
+def validate_email(email: str) -> bool:
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
+
+def validate_password(password: str) -> bool:
+    return len(password) >= 6
+
+# Helper function to calculate idea scores
+def calculate_idea_scores(votes: List[IdeaVote]) -> Dict[str, float]:
+    if not votes:
+        return {
+            "validation_score": 0.0,
+            "total_votes": 0,
+            "avg_feasibility": 0.0,
+            "avg_market_potential": 0.0,
+            "avg_interest": 0.0
+        }
+    
+    total_votes = len(votes)
+    upvotes = len([v for v in votes if v.vote_type == "upvote"])
+    downvotes = len([v for v in votes if v.vote_type == "downvote"])
+    
+    avg_feasibility = sum(v.feasibility_score for v in votes) / total_votes
+    avg_market_potential = sum(v.market_potential_score for v in votes) / total_votes
+    avg_interest = sum(v.interest_score for v in votes) / total_votes
+    
+    # Calculate validation score (weighted average)
+    vote_ratio = upvotes / total_votes if total_votes > 0 else 0
+    score_average = (avg_feasibility + avg_market_potential + avg_interest) / 3
+    validation_score = (vote_ratio * 0.4 + score_average/5 * 0.6) * 100
+    
+    return {
+        "validation_score": round(validation_score, 1),
+        "total_votes": total_votes,
+        "avg_feasibility": round(avg_feasibility, 1),
+        "avg_market_potential": round(avg_market_potential, 1),
+        "avg_interest": round(avg_interest, 1)
+    }
 @api_router.get("/")
 async def root():
     return {"message": "Hello World"}
