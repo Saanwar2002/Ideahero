@@ -341,63 +341,36 @@ export const TrendsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('Most Recent');
   const [showFilters, setShowFilters] = useState(false);
+  const [trends, setTrends] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const trends = [
-    {
-      title: "AI Learning",
-      volume: "🔍",
-      growth: "📈",
-      volumeNumber: "49.5K",
-      growthNumber: "+647%",
-      description: "AI learning refers to the application of artificial intelligence technologies to enhance and personalize educational experiences for learners across various domains.",
-      chartPath: "M0,80 Q50,75 100,60 T200,45 T300,20"
-    },
-    {
-      title: "AI Consulting Firms",
-      volume: "🔍",
-      growth: "📈", 
-      volumeNumber: "2.9K",
-      growthNumber: "+1592%",
-      description: "AI consulting firms refer to specialized organizations that assist businesses in implementing artificial intelligence solutions and strategies.",
-      chartPath: "M0,85 Q75,80 150,50 T300,15"
-    },
-    {
-      title: "3d Modeling Software",
-      volume: "🔍",
-      growth: "📈",
-      volumeNumber: "40.5K", 
-      growthNumber: "+173%",
-      description: "3D modeling software refers to specialized computer programs that enable users to create three-dimensional digital representations of objects and environments.",
-      chartPath: "M0,70 Q100,65 200,55 T300,35"
-    },
-    {
-      title: "Virtual Reality Training",
-      volume: "🔍",
-      growth: "📈",
-      volumeNumber: "12.3K",
-      growthNumber: "+289%",
-      description: "Virtual reality training uses immersive technology to provide realistic, hands-on learning experiences in safe virtual environments.",
-      chartPath: "M0,75 Q80,70 160,45 T300,25"
-    },
-    {
-      title: "Blockchain Development",
-      volume: "🔍", 
-      growth: "📈",
-      volumeNumber: "28.7K",
-      growthNumber: "+425%",
-      description: "Blockchain development involves creating decentralized applications and smart contracts using distributed ledger technology.",
-      chartPath: "M0,90 Q60,85 120,60 T300,30"
-    },
-    {
-      title: "IoT Solutions",
-      volume: "🔍",
-      growth: "📈", 
-      volumeNumber: "35.1K",
-      growthNumber: "+358%",
-      description: "Internet of Things solutions connect everyday devices to the internet, enabling smart automation and data collection.",
-      chartPath: "M0,85 Q90,75 180,50 T300,20"
-    }
-  ];
+  useEffect(() => {
+    const fetchTrends = async () => {
+      try {
+        setLoading(true);
+        const trendsData = await dataService.getTrends();
+        setTrends(trendsData);
+      } catch (error) {
+        console.error('Error fetching trends:', error);
+        // Fallback trends
+        setTrends([
+          {
+            title: "AI Learning",
+            volume: "🔍",
+            growth: "📈",
+            volumeNumber: "49.5K",
+            growthNumber: "+647%",
+            description: "AI learning refers to the application of artificial intelligence technologies to enhance and personalize educational experiences.",
+            chartPath: "M0,80 Q50,75 100,60 T200,45 T300,20"
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTrends();
+  }, []);
 
   const filteredTrends = trends.filter(trend =>
     trend.title.toLowerCase().includes(searchTerm.toLowerCase())
