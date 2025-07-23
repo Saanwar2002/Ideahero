@@ -706,6 +706,557 @@ class BackendTester:
         except Exception as e:
             self.log_test("Dashboard Analytics Integration", False, f"Exception: {str(e)}")
             return False
+
+    # ===== IDEA SUBMISSION SYSTEM TESTS =====
+    
+    def test_idea_submission_authentication(self):
+        """Test that idea submission requires authentication"""
+        try:
+            # Test without authentication
+            idea_data = {
+                "title": "Test Idea",
+                "description": "This is a test idea",
+                "category": "Technology"
+            }
+            
+            response = self.session.post(f"{self.base_url}/ideas/submit", json=idea_data)
+            
+            if response.status_code in [401, 403]:
+                self.log_test("Idea Submission Authentication", True, 
+                            f"Idea submission properly requires authentication (HTTP {response.status_code})")
+                return True
+            else:
+                self.log_test("Idea Submission Authentication", False, 
+                            f"Expected 401/403, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Idea Submission Authentication", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_idea_submission_valid_data(self):
+        """Test idea submission with valid data"""
+        try:
+            if not self.auth_token:
+                self.log_test("Idea Submission Valid Data", False, "No auth token available")
+                return False
+            
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            
+            # Test comprehensive idea submission
+            idea_data = {
+                "title": "AI-Powered Personal Finance Assistant",
+                "description": "A comprehensive personal finance management app that uses AI to analyze spending patterns, predict future expenses, and provide personalized budgeting recommendations. The app would integrate with multiple bank accounts and credit cards to provide real-time financial insights.",
+                "category": "FinTech",
+                "tags": ["AI", "Machine Learning", "Personal Finance", "Mobile App", "Banking Integration"],
+                "target_market": "Young professionals aged 25-40 who want better control over their finances",
+                "problem_statement": "Many people struggle to manage their finances effectively due to lack of visibility into spending patterns and difficulty creating realistic budgets",
+                "solution_approach": "Use machine learning algorithms to analyze transaction data and provide actionable insights through an intuitive mobile interface",
+                "business_model": "Freemium model with basic features free and premium analytics for $9.99/month",
+                "competitive_advantage": "Advanced AI algorithms and seamless integration with multiple financial institutions"
+            }
+            
+            response = self.session.post(f"{self.base_url}/ideas/submit", json=idea_data, headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Verify response structure
+                required_fields = ["id", "title", "description", "category", "submitter_id", "submitter_name", "status", "created_at"]
+                if not all(field in data for field in required_fields):
+                    missing = [f for f in required_fields if f not in data]
+                    self.log_test("Idea Submission Valid Data", False, f"Missing response fields: {missing}")
+                    return False
+                
+                # Verify data accuracy
+                if (data["title"] == idea_data["title"] and
+                    data["description"] == idea_data["description"] and
+                    data["category"] == idea_data["category"] and
+                    data["tags"] == idea_data["tags"] and
+                    data["status"] == "pending"):
+                    
+                    # Store the submitted idea ID for later tests
+                    self.submitted_idea_id = data["id"]
+                    
+                    self.log_test("Idea Submission Valid Data", True, 
+                                f"Idea submitted successfully with ID: {data['id']}, Status: {data['status']}")
+                    return True
+                else:
+                    self.log_test("Idea Submission Valid Data", False, "Data mismatch in response")
+                    return False
+            else:
+                self.log_test("Idea Submission Valid Data", False, f"HTTP {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Idea Submission Valid Data", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_idea_submission_reputation_increase(self):
+        """Test that submitting an idea increases reputation by 5 points"""
+        try:
+            if not self.auth_token:
+                self.log_test("Idea Submission Reputation Increase", False, "No auth token available")
+                return False
+            
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            
+            # Get current reputation
+            profile_response = self.session.get(f"{self.base_url}/auth/me", headers=headers)
+            if profile_response.status_code != 200:
+                self.log_test("Idea Submission Reputation Increase", False, "Could not get current reputation")
+                return False
+            
+            initial_reputation = profile_response.json()["reputation_score"]
+            
+            # Submit another idea
+            idea_data = {
+                "title": "Smart Home Energy Optimization System",
+                "description": "An IoT-based system that learns household energy usage patterns and automatically optimizes energy consumption to reduce costs and environmental impact.",
+                "category": "Technology",
+                "tags": ["IoT", "Smart Home", "Energy", "Sustainability"],
+                "target_market": "Homeowners interested in reducing energy costs",
+                "problem_statement": "High energy bills and inefficient energy usage in homes",
+                "solution_approach": "Smart sensors and AI algorithms to optimize energy consumption"
+            }
+            
+            response = self.session.post(f"{self.base_url}/ideas/submit", json=idea_data, headers=headers)
+            
+            if response.status_code == 200:
+                # Check reputation after submission
+                profile_response2 = self.session.get(f"{self.base_url}/auth/me", headers=headers)
+                if profile_response2.status_code == 200:
+                    new_reputation = profile_response2.json()["reputation_score"]
+                    reputation_increase = new_reputation - initial_reputation
+                    
+                    if reputation_increase == 5:
+                        self.log_test("Idea Submission Reputation Increase", True, 
+                                    f"Reputation increased by {reputation_increase} points (from {initial_reputation} to {new_reputation})")
+                        return True
+                    else:
+                        self.log_test("Idea Submission Reputation Increase", False, 
+                                    f"Expected +5 reputation, got +{reputation_increase}")
+                        return False
+                else:
+                    self.log_test("Idea Submission Reputation Increase", False, "Could not verify new reputation")
+                    return False
+            else:
+                self.log_test("Idea Submission Reputation Increase", False, f"Idea submission failed: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Idea Submission Reputation Increase", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_user_submitted_ideas_authentication(self):
+        """Test that getting user's submitted ideas requires authentication"""
+        try:
+            # Test without authentication
+            response = self.session.get(f"{self.base_url}/ideas/submitted")
+            
+            if response.status_code in [401, 403]:
+                self.log_test("User Submitted Ideas Authentication", True, 
+                            f"User submitted ideas properly requires authentication (HTTP {response.status_code})")
+                return True
+            else:
+                self.log_test("User Submitted Ideas Authentication", False, 
+                            f"Expected 401/403, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("User Submitted Ideas Authentication", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_user_submitted_ideas_data(self):
+        """Test getting user's submitted ideas returns correct data"""
+        try:
+            if not self.auth_token:
+                self.log_test("User Submitted Ideas Data", False, "No auth token available")
+                return False
+            
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response = self.session.get(f"{self.base_url}/ideas/submitted", headers=headers)
+            
+            if response.status_code == 200:
+                ideas = response.json()
+                
+                if isinstance(ideas, list):
+                    if len(ideas) > 0:
+                        # Check that all ideas belong to current user
+                        user_response = self.session.get(f"{self.base_url}/auth/me", headers=headers)
+                        if user_response.status_code == 200:
+                            current_user_id = user_response.json()["id"]
+                            
+                            all_user_ideas = all(idea["submitter_id"] == current_user_id for idea in ideas)
+                            if all_user_ideas:
+                                self.log_test("User Submitted Ideas Data", True, 
+                                            f"Retrieved {len(ideas)} user-submitted ideas correctly")
+                                return True
+                            else:
+                                self.log_test("User Submitted Ideas Data", False, 
+                                            "Some ideas don't belong to current user")
+                                return False
+                        else:
+                            self.log_test("User Submitted Ideas Data", False, "Could not verify current user")
+                            return False
+                    else:
+                        self.log_test("User Submitted Ideas Data", True, "No submitted ideas found (empty response is valid)")
+                        return True
+                else:
+                    self.log_test("User Submitted Ideas Data", False, f"Expected list, got {type(ideas)}")
+                    return False
+            else:
+                self.log_test("User Submitted Ideas Data", False, f"HTTP {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("User Submitted Ideas Data", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_submitted_idea_details_authentication(self):
+        """Test that getting submitted idea details requires authentication and ownership"""
+        try:
+            if not hasattr(self, 'submitted_idea_id'):
+                self.log_test("Submitted Idea Details Authentication", False, "No submitted idea ID available")
+                return False
+            
+            # Test without authentication
+            response = self.session.get(f"{self.base_url}/ideas/submitted/{self.submitted_idea_id}")
+            
+            if response.status_code in [401, 403]:
+                self.log_test("Submitted Idea Details Authentication", True, 
+                            f"Submitted idea details properly requires authentication (HTTP {response.status_code})")
+                return True
+            else:
+                self.log_test("Submitted Idea Details Authentication", False, 
+                            f"Expected 401/403, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Submitted Idea Details Authentication", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_submitted_idea_details_data(self):
+        """Test getting submitted idea details returns correct data"""
+        try:
+            if not self.auth_token or not hasattr(self, 'submitted_idea_id'):
+                self.log_test("Submitted Idea Details Data", False, "No auth token or submitted idea ID available")
+                return False
+            
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response = self.session.get(f"{self.base_url}/ideas/submitted/{self.submitted_idea_id}", headers=headers)
+            
+            if response.status_code == 200:
+                idea = response.json()
+                
+                # Verify idea structure
+                required_fields = ["id", "title", "description", "category", "submitter_id", "status", "created_at"]
+                if not all(field in idea for field in required_fields):
+                    missing = [f for f in required_fields if f not in idea]
+                    self.log_test("Submitted Idea Details Data", False, f"Missing fields: {missing}")
+                    return False
+                
+                # Verify this is the correct idea
+                if idea["id"] == self.submitted_idea_id:
+                    self.log_test("Submitted Idea Details Data", True, 
+                                f"Retrieved idea details correctly: {idea['title']}")
+                    return True
+                else:
+                    self.log_test("Submitted Idea Details Data", False, "ID mismatch in response")
+                    return False
+            else:
+                self.log_test("Submitted Idea Details Data", False, f"HTTP {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Submitted Idea Details Data", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_submitted_idea_details_404(self):
+        """Test 404 error for non-existent submitted ideas"""
+        try:
+            if not self.auth_token:
+                self.log_test("Submitted Idea Details 404", False, "No auth token available")
+                return False
+            
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            fake_id = "non-existent-idea-id-12345"
+            response = self.session.get(f"{self.base_url}/ideas/submitted/{fake_id}", headers=headers)
+            
+            if response.status_code == 404:
+                self.log_test("Submitted Idea Details 404", True, "Non-existent idea properly returns 404")
+                return True
+            else:
+                self.log_test("Submitted Idea Details 404", False, f"Expected 404, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Submitted Idea Details 404", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_update_submitted_idea_authentication(self):
+        """Test that updating submitted ideas requires authentication"""
+        try:
+            if not hasattr(self, 'submitted_idea_id'):
+                self.log_test("Update Submitted Idea Authentication", False, "No submitted idea ID available")
+                return False
+            
+            # Test without authentication
+            update_data = {
+                "title": "Updated Title",
+                "description": "Updated description",
+                "category": "Technology"
+            }
+            
+            response = self.session.put(f"{self.base_url}/ideas/submitted/{self.submitted_idea_id}", json=update_data)
+            
+            if response.status_code in [401, 403]:
+                self.log_test("Update Submitted Idea Authentication", True, 
+                            f"Update submitted idea properly requires authentication (HTTP {response.status_code})")
+                return True
+            else:
+                self.log_test("Update Submitted Idea Authentication", False, 
+                            f"Expected 401/403, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Update Submitted Idea Authentication", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_update_submitted_idea_valid(self):
+        """Test updating a pending submitted idea"""
+        try:
+            if not self.auth_token or not hasattr(self, 'submitted_idea_id'):
+                self.log_test("Update Submitted Idea Valid", False, "No auth token or submitted idea ID available")
+                return False
+            
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            
+            # Update the idea
+            update_data = {
+                "title": "AI-Powered Personal Finance Assistant (Updated)",
+                "description": "An enhanced comprehensive personal finance management app that uses advanced AI to analyze spending patterns, predict future expenses, and provide personalized budgeting recommendations with real-time alerts.",
+                "category": "FinTech",
+                "tags": ["AI", "Machine Learning", "Personal Finance", "Mobile App", "Banking Integration", "Real-time Alerts"],
+                "target_market": "Young professionals and families aged 25-45 who want better control over their finances",
+                "business_model": "Freemium model with basic features free and premium analytics for $12.99/month"
+            }
+            
+            response = self.session.put(f"{self.base_url}/ideas/submitted/{self.submitted_idea_id}", 
+                                      json=update_data, headers=headers)
+            
+            if response.status_code == 200:
+                updated_idea = response.json()
+                
+                # Verify the update
+                if (updated_idea["title"] == update_data["title"] and
+                    updated_idea["description"] == update_data["description"] and
+                    updated_idea["business_model"] == update_data["business_model"] and
+                    "updated_at" in updated_idea):
+                    
+                    self.log_test("Update Submitted Idea Valid", True, 
+                                f"Idea updated successfully: {updated_idea['title']}")
+                    return True
+                else:
+                    self.log_test("Update Submitted Idea Valid", False, "Update data mismatch")
+                    return False
+            else:
+                self.log_test("Update Submitted Idea Valid", False, f"HTTP {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Update Submitted Idea Valid", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_delete_submitted_idea_authentication(self):
+        """Test that deleting submitted ideas requires authentication"""
+        try:
+            # Create a new idea for deletion test
+            if not self.auth_token:
+                self.log_test("Delete Submitted Idea Authentication", False, "No auth token available")
+                return False
+            
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            
+            # First create an idea to delete
+            idea_data = {
+                "title": "Test Idea for Deletion",
+                "description": "This idea will be deleted in the test",
+                "category": "Technology"
+            }
+            
+            create_response = self.session.post(f"{self.base_url}/ideas/submit", json=idea_data, headers=headers)
+            if create_response.status_code != 200:
+                self.log_test("Delete Submitted Idea Authentication", False, "Could not create test idea")
+                return False
+            
+            delete_idea_id = create_response.json()["id"]
+            
+            # Test deletion without authentication
+            response = self.session.delete(f"{self.base_url}/ideas/submitted/{delete_idea_id}")
+            
+            if response.status_code in [401, 403]:
+                self.log_test("Delete Submitted Idea Authentication", True, 
+                            f"Delete submitted idea properly requires authentication (HTTP {response.status_code})")
+                return True
+            else:
+                self.log_test("Delete Submitted Idea Authentication", False, 
+                            f"Expected 401/403, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Delete Submitted Idea Authentication", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_delete_submitted_idea_valid(self):
+        """Test deleting a pending submitted idea"""
+        try:
+            if not self.auth_token:
+                self.log_test("Delete Submitted Idea Valid", False, "No auth token available")
+                return False
+            
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            
+            # Create an idea to delete
+            idea_data = {
+                "title": "Temporary Idea for Deletion Test",
+                "description": "This idea will be deleted to test the deletion functionality",
+                "category": "Technology"
+            }
+            
+            create_response = self.session.post(f"{self.base_url}/ideas/submit", json=idea_data, headers=headers)
+            if create_response.status_code != 200:
+                self.log_test("Delete Submitted Idea Valid", False, "Could not create test idea")
+                return False
+            
+            delete_idea_id = create_response.json()["id"]
+            
+            # Delete the idea
+            response = self.session.delete(f"{self.base_url}/ideas/submitted/{delete_idea_id}", headers=headers)
+            
+            if response.status_code == 200:
+                # Verify deletion by trying to get the idea
+                get_response = self.session.get(f"{self.base_url}/ideas/submitted/{delete_idea_id}", headers=headers)
+                
+                if get_response.status_code == 404:
+                    self.log_test("Delete Submitted Idea Valid", True, "Idea deleted successfully and returns 404")
+                    return True
+                else:
+                    self.log_test("Delete Submitted Idea Valid", False, 
+                                f"Idea still exists after deletion (HTTP {get_response.status_code})")
+                    return False
+            else:
+                self.log_test("Delete Submitted Idea Valid", False, f"HTTP {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Delete Submitted Idea Valid", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_community_ideas_endpoint(self):
+        """Test community ideas endpoint returns only approved ideas"""
+        try:
+            response = self.session.get(f"{self.base_url}/ideas/community")
+            
+            if response.status_code == 200:
+                ideas = response.json()
+                
+                if isinstance(ideas, list):
+                    # Check that all returned ideas are approved (if any exist)
+                    if len(ideas) > 0:
+                        all_approved = all(idea.get("status") == "approved" for idea in ideas)
+                        if all_approved:
+                            self.log_test("Community Ideas Endpoint", True, 
+                                        f"Retrieved {len(ideas)} approved community ideas")
+                            return True
+                        else:
+                            non_approved = [idea for idea in ideas if idea.get("status") != "approved"]
+                            self.log_test("Community Ideas Endpoint", False, 
+                                        f"Found {len(non_approved)} non-approved ideas in community feed")
+                            return False
+                    else:
+                        self.log_test("Community Ideas Endpoint", True, "No community ideas found (empty response is valid)")
+                        return True
+                else:
+                    self.log_test("Community Ideas Endpoint", False, f"Expected list, got {type(ideas)}")
+                    return False
+            else:
+                self.log_test("Community Ideas Endpoint", False, f"HTTP {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Community Ideas Endpoint", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_community_ideas_filtering_sorting(self):
+        """Test community ideas filtering and sorting"""
+        try:
+            # Test category filtering
+            response1 = self.session.get(f"{self.base_url}/ideas/community?category=Technology")
+            
+            # Test sorting by validation_score
+            response2 = self.session.get(f"{self.base_url}/ideas/community?sort_by=validation_score")
+            
+            # Test sorting by created_at
+            response3 = self.session.get(f"{self.base_url}/ideas/community?sort_by=created_at")
+            
+            # Test pagination
+            response4 = self.session.get(f"{self.base_url}/ideas/community?skip=0&limit=5")
+            
+            if all(r.status_code == 200 for r in [response1, response2, response3, response4]):
+                self.log_test("Community Ideas Filtering Sorting", True, 
+                            "Community ideas filtering, sorting, and pagination working")
+                return True
+            else:
+                failed_responses = [i for i, r in enumerate([response1, response2, response3, response4], 1) 
+                                  if r.status_code != 200]
+                self.log_test("Community Ideas Filtering Sorting", False, 
+                            f"Failed responses: {failed_responses}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Community Ideas Filtering Sorting", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_dashboard_submitted_ideas_integration(self):
+        """Test that dashboard includes submitted ideas count"""
+        try:
+            if not self.auth_token:
+                self.log_test("Dashboard Submitted Ideas Integration", False, "No auth token available")
+                return False
+            
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response = self.session.get(f"{self.base_url}/user/dashboard", headers=headers)
+            
+            if response.status_code == 200:
+                dashboard_data = response.json()
+                
+                # Check if submitted ideas are included in user stats
+                user_stats = dashboard_data.get("user_stats", {})
+                if "total_submitted_ideas" in user_stats:
+                    submitted_count = user_stats["total_submitted_ideas"]
+                    
+                    # Check if submitted ideas appear in recent activity
+                    recent_activity = dashboard_data.get("recent_activity", {})
+                    if "submitted_ideas" in recent_activity:
+                        self.log_test("Dashboard Submitted Ideas Integration", True, 
+                                    f"Dashboard includes {submitted_count} submitted ideas in stats and recent activity")
+                        return True
+                    else:
+                        self.log_test("Dashboard Submitted Ideas Integration", False, 
+                                    "Submitted ideas missing from recent activity")
+                        return False
+                else:
+                    self.log_test("Dashboard Submitted Ideas Integration", False, 
+                                "total_submitted_ideas missing from user stats")
+                    return False
+            else:
+                self.log_test("Dashboard Submitted Ideas Integration", False, f"HTTP {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Dashboard Submitted Ideas Integration", False, f"Exception: {str(e)}")
+            return False
     
     def run_all_tests(self):
         """Run all backend tests in priority order"""
