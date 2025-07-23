@@ -104,11 +104,26 @@ class BackendTester:
     def test_user_login(self):
         """Test user login with correct credentials"""
         try:
-            # Use the same credentials from registration
-            timestamp = int(time.time())
+            # First register a new user for login test
+            timestamp = int(time.time()) + 1  # Different timestamp
+            register_data = {
+                "email": f"john.doe{timestamp}@startup.com",
+                "password": "LoginTest123!",
+                "full_name": "John Doe",
+                "skills": ["JavaScript", "Node.js"],
+                "interests": ["Web Development"]
+            }
+            
+            # Register the user first
+            reg_response = self.session.post(f"{self.base_url}/auth/register", json=register_data)
+            if reg_response.status_code != 200:
+                self.log_test("User Login", False, f"Failed to register test user: {reg_response.status_code}")
+                return False
+            
+            # Now test login with the same credentials
             login_data = {
-                "email": f"sarah.johnson{timestamp}@techstartup.com",
-                "password": "SecurePass123!"
+                "email": register_data["email"],
+                "password": register_data["password"]
             }
             
             response = self.session.post(f"{self.base_url}/auth/login", json=login_data)
@@ -116,8 +131,6 @@ class BackendTester:
             if response.status_code == 200:
                 data = response.json()
                 if all(key in data for key in ["access_token", "token_type", "user"]):
-                    # Update auth token for subsequent tests
-                    self.auth_token = data["access_token"]
                     self.log_test("User Login", True, "Login successful with valid credentials")
                     return True
                 else:
