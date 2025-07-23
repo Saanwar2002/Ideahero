@@ -26,34 +26,47 @@ class DataService {
     const cached = this.getCachedData('hackernews_stories');
     if (cached) return cached;
 
+    console.log('Fetching HackerNews stories...');
     try {
       // Fetch top stories
       const topStoriesResponse = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
+      if (!topStoriesResponse.ok) {
+        throw new Error(`HTTP error! status: ${topStoriesResponse.status}`);
+      }
       const topStories = await topStoriesResponse.json();
+      console.log('Fetched top stories count:', topStories.length);
       
-      // Get first 20 stories
-      const storyPromises = topStories.slice(0, 20).map(async (id) => {
+      // Get first 10 stories to reduce load time
+      const storyPromises = topStories.slice(0, 10).map(async (id) => {
         const response = await fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
+        if (!response.ok) return null;
         return response.json();
       });
 
       const stories = await Promise.all(storyPromises);
+      const validStories = stories.filter(story => story && story.title);
+      console.log('Valid stories fetched:', validStories.length);
       
       // Filter for business/startup related content
-      const businessStories = stories.filter(story => 
-        story && story.title && (
-          story.title.toLowerCase().includes('startup') ||
-          story.title.toLowerCase().includes('business') ||
-          story.title.toLowerCase().includes('idea') ||
-          story.title.toLowerCase().includes('saas') ||
-          story.title.toLowerCase().includes('ask hn') ||
-          story.title.toLowerCase().includes('problem') ||
-          story.title.toLowerCase().includes('solution')
-        )
+      const businessStories = validStories.filter(story => 
+        story.title.toLowerCase().includes('startup') ||
+        story.title.toLowerCase().includes('business') ||
+        story.title.toLowerCase().includes('idea') ||
+        story.title.toLowerCase().includes('saas') ||
+        story.title.toLowerCase().includes('ask hn') ||
+        story.title.toLowerCase().includes('problem') ||
+        story.title.toLowerCase().includes('solution') ||
+        story.title.toLowerCase().includes('app') ||
+        story.title.toLowerCase().includes('tool')
       );
 
-      this.setCachedData('hackernews_stories', businessStories);
-      return businessStories;
+      console.log('Business stories filtered:', businessStories.length);
+      
+      // If no business stories found, return all valid stories
+      const finalStories = businessStories.length > 0 ? businessStories : validStories;
+      
+      this.setCachedData('hackernews_stories', finalStories);
+      return finalStories;
     } catch (error) {
       console.error('Error fetching HackerNews stories:', error);
       return this.getFallbackStories();
