@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { dataService } from './dataService';
+import { useAuth } from './AuthContext';
+import { AuthModal } from './AuthComponents';
+import { authService } from './authService';
 
 // Header Component
 export const Header = () => {
