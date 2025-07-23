@@ -550,6 +550,11 @@ export const EnhancedIdeaCard = ({ idea, onVote, onComment, currentUser }) => {
   );
 };
 
+// Legacy IdeaCard component for backward compatibility
+export const IdeaCard = ({ idea }) => {
+  return <EnhancedIdeaCard idea={idea} onVote={() => {}} onComment={() => {}} currentUser={null} />;
+};
+
 // Trend Card Component
 export const TrendCard = ({ trend }) => {
   return (
