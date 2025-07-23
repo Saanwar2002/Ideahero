@@ -134,6 +134,49 @@ class CommentCreate(BaseModel):
     idea_id: str
     content: str
 
+# Idea Submission Models
+class IdeaSubmission(BaseModel):
+    title: str
+    description: str
+    category: str
+    tags: List[str] = []
+    target_market: Optional[str] = None
+    problem_statement: Optional[str] = None
+    solution_approach: Optional[str] = None
+    business_model: Optional[str] = None
+    competitive_advantage: Optional[str] = None
+
+class IdeaStatus(str):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    DRAFT = "draft"
+
+class SubmittedIdea(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    description: str
+    category: str
+    tags: List[str] = []
+    target_market: Optional[str] = None
+    problem_statement: Optional[str] = None
+    solution_approach: Optional[str] = None
+    business_model: Optional[str] = None
+    competitive_advantage: Optional[str] = None
+    submitter_id: str
+    submitter_name: str
+    status: str = IdeaStatus.PENDING
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    admin_notes: Optional[str] = None
+    votes: List[IdeaVote] = []
+    comments: List[IdeaComment] = []
+    validation_score: float = 0.0
+    total_votes: int = 0
+    avg_feasibility: float = 0.0
+    avg_market_potential: float = 0.0
+    avg_interest: float = 0.0
+
 # Authentication Helper Functions
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
