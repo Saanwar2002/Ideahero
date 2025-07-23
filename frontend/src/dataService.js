@@ -282,6 +282,7 @@ class DataService {
 
   // Fallback data when APIs fail
   getFallbackStories() {
+    console.log('Using fallback stories');
     return [
       {
         id: 'fallback1',
@@ -289,20 +290,59 @@ class DataService {
         score: 156,
         descendants: 89,
         url: 'https://example.com'
+      },
+      {
+        id: 'fallback2', 
+        title: 'SaaS Solution for Remote Team Management',
+        score: 124,
+        descendants: 67,
+        url: 'https://example.com'
+      },
+      {
+        id: 'fallback3',
+        title: 'Mobile App for Health and Fitness Tracking',
+        score: 98,
+        descendants: 45,
+        url: 'https://example.com'
       }
     ];
   }
 
   getFallbackTrends() {
+    console.log('Using fallback trends');
     return [
       {
         title: 'AI Development Tools',
-        description: 'Growing trend in AI-powered development assistance',
+        description: 'Growing trend in AI-powered development assistance and automation tools',
         volumeNumber: '45.2K',
         growthNumber: '+234%',
         volume: '⭐',
         growth: '📈',
-        chartPath: "M0,80 Q50,75 100,60 T200,45 T300,20"
+        chartPath: "M0,80 Q50,75 100,60 T200,45 T300,20",
+        category: 'AI & Machine Learning',
+        language: 'Python'
+      },
+      {
+        title: 'React Development',
+        description: 'Modern React frameworks and component libraries for web development',
+        volumeNumber: '38.7K',
+        growthNumber: '+189%',
+        volume: '⭐',
+        growth: '📈', 
+        chartPath: "M0,85 Q75,80 150,50 T300,15",
+        category: 'Web Development',
+        language: 'JavaScript'
+      },
+      {
+        title: 'Cloud Infrastructure',
+        description: 'Tools and platforms for cloud deployment and infrastructure management',
+        volumeNumber: '29.1K',
+        growthNumber: '+156%',
+        volume: '⭐',
+        growth: '📈',
+        chartPath: "M0,70 Q100,65 200,55 T300,35",
+        category: 'Cloud & Infrastructure',
+        language: 'Go'
       }
     ];
   }
