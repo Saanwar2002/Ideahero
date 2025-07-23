@@ -78,10 +78,15 @@ class DataService {
     const cached = this.getCachedData('github_trends');
     if (cached) return cached;
 
+    console.log('Fetching GitHub trends...');
     try {
       // Fetch trending repositories
-      const response = await fetch('https://api.github.com/search/repositories?q=created:>2024-01-01&sort=stars&order=desc&per_page=30');
+      const response = await fetch('https://api.github.com/search/repositories?q=created:>2024-01-01&sort=stars&order=desc&per_page=15');
+      if (!response.ok) {
+        throw new Error(`GitHub API error! status: ${response.status}`);
+      }
       const data = await response.json();
+      console.log('GitHub API response received, items:', data.items?.length || 0);
       
       if (!data.items) throw new Error('No GitHub data received');
 
@@ -99,6 +104,7 @@ class DataService {
         language: repo.language
       }));
 
+      console.log('Processed trends:', trends.length);
       this.setCachedData('github_trends', trends);
       return trends;
     } catch (error) {
