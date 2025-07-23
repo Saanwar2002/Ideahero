@@ -164,53 +164,389 @@ export const Header = () => {
   );
 };
 
-// Business Idea Card Component
-export const IdeaCard = ({ idea }) => {
-  return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-      <div className="flex flex-wrap gap-2 mb-4">
-        {idea.tags.map((tag, index) => (
-          <span
-            key={index}
-            className={`px-3 py-1 rounded-full text-sm font-medium ${
-              tag.type === 'timing' 
-                ? 'bg-orange-100 text-orange-800' 
-                : tag.type === 'advantage'
-                ? 'bg-blue-100 text-blue-800'
-                : 'bg-green-100 text-green-800'
-            }`}
+// Enhanced Business Idea Card Component with Validation Features
+export const EnhancedIdeaCard = ({ idea, onVote, onComment, currentUser }) => {
+  const [showVoteModal, setShowVoteModal] = useState(false);
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [showImplementationGuide, setShowImplementationGuide] = useState(false);
+
+  const VoteModal = () => {
+    const [voteData, setVoteData] = useState({
+      vote_type: 'upvote',
+      feasibility_score: 3,
+      market_potential_score: 3,
+      interest_score: 3,
+    });
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      setLoading(true);
+      try {
+        await onVote(idea.id, voteData);
+        setShowVoteModal(false);
+      } catch (error) {
+        console.error('Vote error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Rate this Idea</h3>
+            <button
+              onClick={() => setShowVoteModal(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              ×
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Overall Rating
+              </label>
+              <div className="flex space-x-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="upvote"
+                    checked={voteData.vote_type === 'upvote'}
+                    onChange={(e) => setVoteData({...voteData, vote_type: e.target.value})}
+                    className="mr-2"
+                  />
+                  👍 Upvote
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="downvote"
+                    checked={voteData.vote_type === 'downvote'}
+                    onChange={(e) => setVoteData({...voteData, vote_type: e.target.value})}
+                    className="mr-2"
+                  />
+                  👎 Downvote
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Feasibility Score: {voteData.feasibility_score}/5
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="5"
+                value={voteData.feasibility_score}
+                onChange={(e) => setVoteData({...voteData, feasibility_score: parseInt(e.target.value)})}
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Market Potential: {voteData.market_potential_score}/5
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="5"
+                value={voteData.market_potential_score}
+                onChange={(e) => setVoteData({...voteData, market_potential_score: parseInt(e.target.value)})}
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Interest Level: {voteData.interest_score}/5
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="5"
+                value={voteData.interest_score}
+                onChange={(e) => setVoteData({...voteData, interest_score: parseInt(e.target.value)})}
+                className="w-full"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              {loading ? 'Submitting...' : 'Submit Rating'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  const CommentModal = () => {
+    const [comment, setComment] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      if (comment.trim().length < 10) return;
+      
+      setLoading(true);
+      try {
+        await onComment(idea.id, comment);
+        setComment('');
+        setShowCommentModal(false);
+      } catch (error) {
+        console.error('Comment error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Add Comment</h3>
+            <button
+              onClick={() => setShowCommentModal(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              ×
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Share your thoughts about this idea..."
+              rows={4}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              minLength={10}
+              required
+            />
+            <div className="flex justify-between items-center mt-4">
+              <span className="text-sm text-gray-500">
+                {comment.length}/10 characters minimum
+              </span>
+              <button
+                type="submit"
+                disabled={loading || comment.trim().length < 10}
+                className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {loading ? 'Posting...' : 'Post Comment'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  const ImplementationGuide = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Implementation Guide</h3>
+          <button
+            onClick={() => setShowImplementationGuide(false)}
+            className="text-gray-400 hover:text-gray-600"
           >
-            {tag.icon} {tag.label}
-          </span>
-        ))}
-        {idea.moreCount && (
-          <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-            +{idea.moreCount} more
-          </span>
+            ×
+          </button>
+        </div>
+
+        {idea.implementation_guide ? (
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-blue-900 mb-2">Timeline</h4>
+                <p className="text-blue-700">{idea.implementation_guide.estimated_time}</p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-green-900 mb-2">Budget</h4>
+                <p className="text-green-700">{idea.implementation_guide.estimated_budget}</p>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-purple-900 mb-2">Difficulty</h4>
+                <p className="text-purple-700">{idea.implementation_guide.difficulty}</p>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-3">Required Skills</h4>
+              <div className="flex flex-wrap gap-2">
+                {idea.implementation_guide.required_skills.map((skill, index) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-3">Step-by-Step Guide</h4>
+              <ol className="space-y-3">
+                {idea.implementation_guide.steps.map((step, index) => (
+                  <li key={index} className="flex items-start">
+                    <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-medium mr-3 mt-0.5">
+                      {index + 1}
+                    </span>
+                    <span className="text-gray-700">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        ) : (
+          <p className="text-gray-500">Implementation guide not available for this idea.</p>
         )}
       </div>
-      <h3 className="text-xl font-semibold text-gray-900 mb-3">{idea.title}</h3>
-      <p className="text-gray-600 leading-relaxed mb-4">{idea.description}</p>
-      
-      {/* Real data indicators */}
-      {idea.source && (
-        <div className="flex items-center justify-between text-sm text-gray-500 border-t pt-3">
-          <div className="flex items-center space-x-4">
-            <span className="flex items-center">
-              🔥 {idea.score || 0} points
-            </span>
-            <span className="flex items-center">
-              💬 {idea.comments || 0} comments
-            </span>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+        {/* Validation Score Badge */}
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex flex-wrap gap-2">
+            {idea.tags && idea.tags.map((tag, index) => (
+              <span
+                key={index}
+                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  tag.type === 'timing' 
+                    ? 'bg-orange-100 text-orange-800' 
+                    : tag.type === 'advantage'
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-green-100 text-green-800'
+                }`}
+              >
+                {tag.icon} {tag.label}
+              </span>
+            ))}
           </div>
-          <div className="flex items-center">
-            <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+          
+          {idea.validation_score > 0 && (
+            <div className="bg-gradient-to-r from-green-400 to-blue-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+              {idea.validation_score}% Validated
+            </div>
+          )}
+        </div>
+
+        <h3 className="text-xl font-semibold text-gray-900 mb-3">{idea.title}</h3>
+        <p className="text-gray-600 leading-relaxed mb-4">{idea.description}</p>
+        
+        {/* Validation Metrics */}
+        {idea.total_votes > 0 && (
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="grid grid-cols-4 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-blue-600">{idea.total_votes}</div>
+                <div className="text-xs text-gray-500">Votes</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-600">{idea.avg_feasibility}</div>
+                <div className="text-xs text-gray-500">Feasibility</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-purple-600">{idea.avg_market_potential}</div>
+                <div className="text-xs text-gray-500">Market</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-orange-600">{idea.avg_interest}</div>
+                <div className="text-xs text-gray-500">Interest</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {currentUser ? (
+            <>
+              <button
+                onClick={() => setShowVoteModal(true)}
+                className="flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm hover:bg-blue-200 transition-colors"
+              >
+                👍 Rate Idea
+              </button>
+              <button
+                onClick={() => setShowCommentModal(true)}
+                className="flex items-center px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm hover:bg-green-200 transition-colors"
+              >
+                💬 Comment
+              </button>
+            </>
+          ) : (
+            <span className="text-sm text-gray-500">Login to rate and comment</span>
+          )}
+          
+          {idea.implementation_guide && (
+            <button
+              onClick={() => setShowImplementationGuide(true)}
+              className="flex items-center px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm hover:bg-purple-200 transition-colors"
+            >
+              🚀 Implementation Guide
+            </button>
+          )}
+        </div>
+
+        {/* Comments Preview */}
+        {idea.comments && idea.comments.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <h4 className="font-medium text-gray-900 mb-2">Recent Comments</h4>
+            <div className="space-y-2">
+              {idea.comments.slice(0, 2).map((comment, index) => (
+                <div key={index} className="bg-gray-50 p-3 rounded">
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="font-medium text-sm text-gray-900">{comment.user_name}</span>
+                    <span className="text-xs text-gray-500">
+                      {new Date(comment.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700">{comment.content}</p>
+                </div>
+              ))}
+              {idea.comments.length > 2 && (
+                <button className="text-sm text-blue-600 hover:text-blue-800">
+                  View all {idea.comments.length} comments
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Source info */}
+        {idea.source && (
+          <div className="flex items-center justify-between text-sm text-gray-500 border-t pt-3 mt-4">
+            <span className="flex items-center">
               via {idea.source}
             </span>
+            {idea.created_at && (
+              <span>
+                {new Date(idea.created_at).toLocaleDateString()}
+              </span>
+            )}
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      {showVoteModal && <VoteModal />}
+      {showCommentModal && <CommentModal />}
+      {showImplementationGuide && <ImplementationGuide />}
+    </>
   );
 };
 
