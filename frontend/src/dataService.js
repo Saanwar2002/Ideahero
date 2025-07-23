@@ -387,17 +387,21 @@ class DataService {
   }
 
   getFallbackIdea() {
+    console.log('Using fallback idea');
     return {
       id: 'fallback',
       title: 'Real-time Data Integration Platform',
-      description: 'A comprehensive platform that aggregates data from multiple sources including social media, news, and developer communities to identify emerging business opportunities and market trends.',
+      description: 'A comprehensive platform that aggregates data from multiple sources including social media, news, and developer communities to identify emerging business opportunities and market trends. This solution addresses the growing need for businesses to stay ahead of market developments.',
       tags: [
         { label: 'Data Driven', type: 'advantage', icon: '📊' },
         { label: 'Market Ready', type: 'ready', icon: '✅' },
         { label: 'High Demand', type: 'timing', icon: '🔥' }
       ],
       category: 'Technology',
-      moreCount: 12
+      moreCount: 12,
+      score: 145,
+      comments: 78,
+      source: 'Fallback'
     };
   }
 }
