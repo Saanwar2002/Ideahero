@@ -1468,3 +1468,404 @@ export const PricingPage = () => {
     </div>
   );
 };
+
+// User Dashboard Component
+export const UserDashboard = () => {
+  const [dashboardData, setDashboardData] = useState(null);
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  const { user, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      window.location.href = '/';
+      return;
+    }
+    
+    fetchDashboardData();
+  }, [isAuthenticated]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [dashboard, analytics] = await Promise.all([
+        authService.getUserDashboard(),
+        authService.getUserAnalytics()
+      ]);
+      
+      setDashboardData(dashboard);
+      setAnalyticsData(analytics);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+          <p className="text-gray-600 mb-8">Please log in to access your dashboard.</p>
+          <a href="/" className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+            Go to Homepage
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="bg-white p-6 rounded-lg shadow-sm">
+                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                  <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+                <div className="h-40 bg-gray-200 rounded"></div>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+                <div className="h-40 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const StatCard = ({ icon, title, value, subtitle, color = "blue" }) => (
+    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+      <div className="flex items-center">
+        <div className={`w-12 h-12 rounded-lg bg-${color}-100 flex items-center justify-center mr-4`}>
+          <span className="text-2xl">{icon}</span>
+        </div>
+        <div>
+          <h3 className="text-sm font-medium text-gray-500">{title}</h3>
+          <p className="text-2xl font-bold text-gray-900">{value}</p>
+          {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
+        </div>
+      </div>
+    </div>
+  );
+
+  const ActivityItem = ({ icon, title, subtitle, time, link }) => (
+    <div className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg">
+      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+        <span className="text-sm">{icon}</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-900">{title}</p>
+        <p className="text-sm text-gray-500 truncate">{subtitle}</p>
+        <p className="text-xs text-gray-400">{time}</p>
+      </div>
+      {link && (
+        <a href={link} className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+          View
+        </a>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Welcome back, {user?.full_name}! 👋
+          </h1>
+          <p className="text-gray-600">
+            Here's your activity overview and personal analytics
+          </p>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="border-b border-gray-200 mb-8">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'overview'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'analytics'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Analytics
+            </button>
+            <button
+              onClick={() => setActiveTab('activity')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'activity'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Recent Activity
+            </button>
+          </nav>
+        </div>
+
+        {/* Overview Tab */}
+        {activeTab === 'overview' && dashboardData && (
+          <div className="space-y-8">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <StatCard
+                icon="🏆"
+                title="Reputation Score"
+                value={dashboardData.user_stats.reputation_score}
+                subtitle="Community points"
+                color="yellow"
+              />
+              <StatCard
+                icon="🗳️"
+                title="Ideas Voted"
+                value={dashboardData.user_stats.total_votes}
+                subtitle={`${dashboardData.user_stats.upvotes_given} upvotes`}
+                color="green"
+              />
+              <StatCard
+                icon="💬"
+                title="Comments Made"
+                value={dashboardData.user_stats.total_comments}
+                subtitle="Community engagement"
+                color="blue"
+              />
+              <StatCard
+                icon="📊"
+                title="Total Interactions"
+                value={dashboardData.engagement_summary.total_interactions}
+                subtitle={`${dashboardData.engagement_summary.vote_ratio}% positive`}
+                color="purple"
+              />
+            </div>
+
+            {/* Favorite Categories */}
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Favorite Categories</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {dashboardData.user_stats.favorite_categories.map((category, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="font-medium text-gray-900">{category.category}</span>
+                    <span className="text-sm text-gray-500">{category.count} votes</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <a
+                  href="/ideas"
+                  className="flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                >
+                  <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
+                    <span className="text-white text-lg">💡</span>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">Browse Ideas</h4>
+                    <p className="text-sm text-gray-500">Discover new opportunities</p>
+                  </div>
+                </a>
+                <a
+                  href="/trends"
+                  className="flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                >
+                  <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mr-3">
+                    <span className="text-white text-lg">📈</span>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">View Trends</h4>
+                    <p className="text-sm text-gray-500">Track market movements</p>
+                  </div>
+                </a>
+                <button
+                  onClick={fetchDashboardData}
+                  className="flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                >
+                  <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mr-3">
+                    <span className="text-white text-lg">🔄</span>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">Refresh Data</h4>
+                    <p className="text-sm text-gray-500">Update your stats</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && analyticsData && (
+          <div className="space-y-8">
+            {/* Activity Timeline */}
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Activity Timeline</h3>
+              <div className="h-64 flex items-end space-x-2">
+                {analyticsData.activity_timeline.map((month, index) => (
+                  <div key={index} className="flex-1 flex flex-col items-center">
+                    <div className="w-full bg-gray-200 rounded-t relative" style={{ height: '200px' }}>
+                      <div
+                        className="bg-blue-500 rounded-t"
+                        style={{
+                          height: `${(month.votes / Math.max(...analyticsData.activity_timeline.map(m => m.votes))) * 100}%`,
+                          position: 'absolute',
+                          bottom: 0,
+                          width: '50%',
+                          left: 0
+                        }}
+                      ></div>
+                      <div
+                        className="bg-green-500 rounded-t"
+                        style={{
+                          height: `${(month.comments / Math.max(...analyticsData.activity_timeline.map(m => m.comments))) * 100}%`,
+                          position: 'absolute',
+                          bottom: 0,
+                          width: '50%',
+                          right: 0
+                        }}
+                      ></div>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-2">{month.month}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-center mt-4 space-x-4">
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-blue-500 rounded mr-2"></div>
+                  <span className="text-sm text-gray-600">Votes</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 bg-green-500 rounded mr-2"></div>
+                  <span className="text-sm text-gray-600">Comments</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Category Distribution */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Category Distribution</h3>
+                <div className="space-y-3">
+                  {analyticsData.category_distribution.map((cat, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">{cat.category}</span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-blue-500 rounded-full"
+                            style={{
+                              width: `${(cat.count / Math.max(...analyticsData.category_distribution.map(c => c.count))) * 100}%`
+                            }}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">{cat.count}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Distribution</h3>
+                <div className="space-y-3">
+                  {analyticsData.score_distribution.map((score, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">{score.score} Stars</span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-yellow-500 rounded-full"
+                            style={{
+                              width: `${(score.count / Math.max(...analyticsData.score_distribution.map(s => s.count))) * 100}%`
+                            }}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">{score.count}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Activity Tab */}
+        {activeTab === 'activity' && dashboardData && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Recent Votes */}
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Votes</h3>
+              <div className="space-y-2">
+                {dashboardData.recent_activity.voted_ideas.length > 0 ? (
+                  dashboardData.recent_activity.voted_ideas.map((vote, index) => (
+                    <ActivityItem
+                      key={index}
+                      icon={vote.vote_type === 'upvote' ? '👍' : '👎'}
+                      title={vote.vote_type === 'upvote' ? 'Upvoted idea' : 'Downvoted idea'}
+                      subtitle={vote.idea_title}
+                      time={new Date(vote.voted_at).toLocaleDateString()}
+                      link={`/ideas?id=${vote.idea_id}`}
+                    />
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm">No recent votes</p>
+                )}
+              </div>
+            </div>
+
+            {/* Recent Comments */}
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Comments</h3>
+              <div className="space-y-2">
+                {dashboardData.recent_activity.commented_ideas.length > 0 ? (
+                  dashboardData.recent_activity.commented_ideas.map((comment, index) => (
+                    <ActivityItem
+                      key={index}
+                      icon="💬"
+                      title="Commented on idea"
+                      subtitle={comment.idea_title}
+                      time={new Date(comment.commented_at).toLocaleDateString()}
+                      link={`/ideas?id=${comment.idea_id}`}
+                    />
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm">No recent comments</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+};
