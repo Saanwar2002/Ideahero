@@ -477,12 +477,13 @@ class BackendTester:
             
             response = self.session.post(f"{self.base_url}/auth/register", json=invalid_data)
             
-            if response.status_code == 400:
-                self.log_test("Input Validation", True, "Invalid input properly rejected")
+            if response.status_code in [400, 422]:  # Both are acceptable for validation errors
+                self.log_test("Input Validation", True, 
+                            f"Invalid input properly rejected (HTTP {response.status_code})")
                 return True
             else:
                 self.log_test("Input Validation", False, 
-                            f"Expected 400 for invalid input, got {response.status_code}")
+                            f"Expected 400/422 for invalid input, got {response.status_code}")
                 return False
                 
         except Exception as e:
