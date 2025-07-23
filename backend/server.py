@@ -478,6 +478,10 @@ async def get_user_dashboard(current_user: User = Depends(get_current_user)):
     user_comments = await db.ideas.find({"comments.user_id": user_id}).to_list(1000)
     total_comments = sum(len([comment for comment in idea["comments"] if comment["user_id"] == user_id]) for idea in user_comments)
     
+    # Get user's submitted ideas
+    user_submitted_ideas = await db.submitted_ideas.find({"submitter_id": user_id}).to_list(1000)
+    total_submitted_ideas = len(user_submitted_ideas)
+    
     # Get ideas the user has voted on recently
     recent_voted_ideas = []
     for idea in user_votes[-5:]:  # Last 5 ideas voted on
@@ -502,6 +506,16 @@ async def get_user_dashboard(current_user: User = Depends(get_current_user)):
                 "commented_at": user_comment["created_at"]
             })
     
+    # Get user's recent submitted ideas
+    recent_submitted_ideas = []
+    for idea in user_submitted_ideas[-5:]:  # Last 5 submitted ideas
+        recent_submitted_ideas.append({
+            "idea_id": idea["id"],
+            "idea_title": idea["title"],
+            "status": idea["status"],
+            "submitted_at": idea["created_at"]
+        })
+    
     # Calculate engagement metrics
     upvotes_given = sum(len([vote for vote in idea["votes"] if vote["user_id"] == user_id and vote["vote_type"] == "upvote"]) for idea in user_votes)
     downvotes_given = sum(len([vote for vote in idea["votes"] if vote["user_id"] == user_id and vote["vote_type"] == "downvote"]) for idea in user_votes)
@@ -518,6 +532,7 @@ async def get_user_dashboard(current_user: User = Depends(get_current_user)):
         "user_stats": {
             "total_votes": total_votes,
             "total_comments": total_comments,
+            "total_submitted_ideas": total_submitted_ideas,
             "upvotes_given": upvotes_given,
             "downvotes_given": downvotes_given,
             "reputation_score": current_user.reputation_score,
@@ -526,14 +541,245 @@ async def get_user_dashboard(current_user: User = Depends(get_current_user)):
         },
         "recent_activity": {
             "voted_ideas": recent_voted_ideas,
-            "commented_ideas": recent_commented_ideas
+            "commented_ideas": recent_commented_ideas,
+            "submitted_ideas": recent_submitted_ideas
         },
         "engagement_summary": {
-            "total_interactions": total_votes + total_comments,
+            "total_interactions": total_votes + total_comments + total_submitted_ideas,
             "vote_ratio": round(upvotes_given / (upvotes_given + downvotes_given) * 100, 1) if (upvotes_given + downvotes_given) > 0 else 0,
             "active_days": 0  # TODO: Calculate based on activity dates
         }
     }
+
+# Idea Submission Endpoints
+@api_router.post("/ideas/submit", response_model=SubmittedIdea)
+async def submit_idea(idea_data: IdeaSubmission, current_user: User = Depends(get_current_user)):
+    """Submit a new idea for community validation"""
+    
+    # Create submitted idea object
+    submitted_idea = SubmittedIdea(
+        title=idea_data.title,
+        description=idea_data.description,
+        category=idea_data.category,
+        tags=idea_data.tags,
+        target_market=idea_data.target_market,
+        problem_statement=idea_data.problem_statement,
+        solution_approach=idea_data.solution_approach,
+        business_model=idea_data.business_model,
+        competitive_advantage=idea_data.competitive_advantage,
+        submitter_id=current_user.id,
+        submitter_name=current_user.full_name,
+        status=IdeaStatus.PENDING
+    )
+    
+    # Save to database
+    await db.submitted_ideas.insert_one(submitted_idea.dict())
+    
+    # Update user reputation for idea submission
+    await db.users.update_one(
+        {"id": current_user.id},
+        {"$inc": {"reputation_score": 5}}  # +5 points for submitting an idea
+    )
+    
+    return submitted_idea
+
+@api_router.get("/ideas/submitted", response_model=List[SubmittedIdea])
+async def get_user_submitted_ideas(current_user: User = Depends(get_current_user)):
+    """Get all ideas submitted by the current user"""
+    
+    submitted_ideas = await db.submitted_ideas.find({"submitter_id": current_user.id}).to_list(1000)
+    return [SubmittedIdea(**idea) for idea in submitted_ideas]
+
+@api_router.get("/ideas/submitted/{idea_id}", response_model=SubmittedIdea)
+async def get_submitted_idea_details(idea_id: str, current_user: User = Depends(get_current_user)):
+    """Get details of a specific submitted idea"""
+    
+    idea = await db.submitted_ideas.find_one({"id": idea_id})
+    if not idea:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    
+    # Check if user is the submitter or has permission to view
+    if idea["submitter_id"] != current_user.id:
+        # Only allow viewing if idea is approved
+        if idea["status"] != IdeaStatus.APPROVED:
+            raise HTTPException(status_code=403, detail="Access denied")
+    
+    return SubmittedIdea(**idea)
+
+@api_router.put("/ideas/submitted/{idea_id}", response_model=SubmittedIdea)
+async def update_submitted_idea(idea_id: str, idea_data: IdeaSubmission, current_user: User = Depends(get_current_user)):
+    """Update a submitted idea (only if pending or draft)"""
+    
+    idea = await db.submitted_ideas.find_one({"id": idea_id})
+    if not idea:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    
+    # Check if user is the submitter
+    if idea["submitter_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Only allow editing if idea is pending or draft
+    if idea["status"] not in [IdeaStatus.PENDING, IdeaStatus.DRAFT]:
+        raise HTTPException(status_code=400, detail="Cannot edit approved or rejected ideas")
+    
+    # Update the idea
+    update_data = idea_data.dict()
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.submitted_ideas.update_one(
+        {"id": idea_id},
+        {"$set": update_data}
+    )
+    
+    # Get updated idea
+    updated_idea = await db.submitted_ideas.find_one({"id": idea_id})
+    return SubmittedIdea(**updated_idea)
+
+@api_router.delete("/ideas/submitted/{idea_id}")
+async def delete_submitted_idea(idea_id: str, current_user: User = Depends(get_current_user)):
+    """Delete a submitted idea (only if pending or draft)"""
+    
+    idea = await db.submitted_ideas.find_one({"id": idea_id})
+    if not idea:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    
+    # Check if user is the submitter
+    if idea["submitter_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Only allow deletion if idea is pending or draft
+    if idea["status"] not in [IdeaStatus.PENDING, IdeaStatus.DRAFT]:
+        raise HTTPException(status_code=400, detail="Cannot delete approved or rejected ideas")
+    
+    # Delete the idea
+    await db.submitted_ideas.delete_one({"id": idea_id})
+    
+    return {"message": "Idea deleted successfully"}
+
+@api_router.get("/ideas/community", response_model=List[SubmittedIdea])
+async def get_community_ideas(
+    category: Optional[str] = None,
+    sort_by: Optional[str] = "created_at",
+    skip: int = 0,
+    limit: int = 20
+):
+    """Get approved community-submitted ideas"""
+    
+    # Build query for approved ideas only
+    query = {"status": IdeaStatus.APPROVED}
+    
+    if category and category != "All":
+        query["category"] = category
+    
+    # Sort options
+    sort_field = "created_at"
+    sort_order = -1  # Descending
+    
+    if sort_by == "validation_score":
+        sort_field = "validation_score"
+    elif sort_by == "total_votes":
+        sort_field = "total_votes"
+    
+    ideas = await db.submitted_ideas.find(query).sort(sort_field, sort_order).skip(skip).limit(limit).to_list(limit)
+    
+    return [SubmittedIdea(**idea) for idea in ideas]
+
+@api_router.post("/ideas/submitted/{idea_id}/vote")
+async def vote_on_submitted_idea(idea_id: str, vote_data: VoteCreate, current_user: User = Depends(get_current_user)):
+    """Vote on a submitted idea (only if approved)"""
+    
+    idea = await db.submitted_ideas.find_one({"id": idea_id})
+    if not idea:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    
+    # Only allow voting on approved ideas
+    if idea["status"] != IdeaStatus.APPROVED:
+        raise HTTPException(status_code=400, detail="Can only vote on approved ideas")
+    
+    # Check if user already voted
+    existing_vote = None
+    for vote in idea["votes"]:
+        if vote["user_id"] == current_user.id:
+            existing_vote = vote
+            break
+    
+    # Create new vote
+    new_vote = IdeaVote(
+        user_id=current_user.id,
+        vote_type=vote_data.vote_type,
+        feasibility_score=vote_data.feasibility_score,
+        market_potential_score=vote_data.market_potential_score,
+        interest_score=vote_data.interest_score
+    )
+    
+    if existing_vote:
+        # Update existing vote
+        await db.submitted_ideas.update_one(
+            {"id": idea_id, "votes.user_id": current_user.id},
+            {"$set": {"votes.$": new_vote.dict()}}
+        )
+    else:
+        # Add new vote
+        await db.submitted_ideas.update_one(
+            {"id": idea_id},
+            {"$push": {"votes": new_vote.dict()}}
+        )
+    
+    # Recalculate scores
+    updated_idea = await db.submitted_ideas.find_one({"id": idea_id})
+    votes = [IdeaVote(**vote) for vote in updated_idea["votes"]]
+    scores = calculate_idea_scores(votes)
+    
+    await db.submitted_ideas.update_one(
+        {"id": idea_id},
+        {"$set": scores}
+    )
+    
+    # Update user reputation
+    reputation_change = 2 if vote_data.vote_type == "upvote" else 1
+    await db.users.update_one(
+        {"id": current_user.id},
+        {"$inc": {"reputation_score": reputation_change}}
+    )
+    
+    return {"message": "Vote recorded successfully"}
+
+@api_router.post("/ideas/submitted/{idea_id}/comment")
+async def comment_on_submitted_idea(idea_id: str, comment_data: CommentCreate, current_user: User = Depends(get_current_user)):
+    """Comment on a submitted idea (only if approved)"""
+    
+    idea = await db.submitted_ideas.find_one({"id": idea_id})
+    if not idea:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    
+    # Only allow commenting on approved ideas
+    if idea["status"] != IdeaStatus.APPROVED:
+        raise HTTPException(status_code=400, detail="Can only comment on approved ideas")
+    
+    # Validate comment content
+    if len(comment_data.content.strip()) < 10:
+        raise HTTPException(status_code=400, detail="Comment must be at least 10 characters long")
+    
+    # Create new comment
+    new_comment = IdeaComment(
+        user_id=current_user.id,
+        user_name=current_user.full_name,
+        content=comment_data.content.strip()
+    )
+    
+    # Add comment to idea
+    await db.submitted_ideas.update_one(
+        {"id": idea_id},
+        {"$push": {"comments": new_comment.dict()}}
+    )
+    
+    # Update user reputation
+    await db.users.update_one(
+        {"id": current_user.id},
+        {"$inc": {"reputation_score": 1}}
+    )
+    
+    return {"message": "Comment added successfully"}
 
 @api_router.get("/user/analytics")
 async def get_user_analytics(current_user: User = Depends(get_current_user)):
