@@ -33,6 +33,11 @@ export const Header = () => {
 
             {/* Navigation */}
             <nav className="hidden md:flex space-x-8">
+              {isAuthenticated && (
+                <a href="/dashboard" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors">
+                  Dashboard
+                </a>
+              )}
               <a href="/ideas" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors">
                 Idea Database
               </a>
