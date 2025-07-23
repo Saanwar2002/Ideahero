@@ -728,7 +728,12 @@ class BackendTester:
             ("Idea Voting System", self.test_idea_voting_system),
             ("Comment System", self.test_comment_system),
             ("Authentication Requirements", self.test_authentication_requirements),
-            ("Input Validation", self.test_input_validation)
+            ("Input Validation", self.test_input_validation),
+            ("User Dashboard Authentication", self.test_user_dashboard_authentication),
+            ("User Dashboard Data", self.test_user_dashboard_data),
+            ("User Analytics Authentication", self.test_user_analytics_authentication),
+            ("User Analytics Data", self.test_user_analytics_data),
+            ("Dashboard Analytics Integration", self.test_dashboard_analytics_integration)
         ]
         
         passed = 0
