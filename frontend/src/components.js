@@ -617,7 +617,7 @@ export const TrendCard = ({ trend }) => {
   );
 };
 
-// HomePage Component
+// HomePage Component with Enhanced Features
 export const HomePage = () => {
   const [currentDate] = useState(new Date().toLocaleDateString('en-US', { 
     year: 'numeric', 
@@ -626,13 +626,22 @@ export const HomePage = () => {
   }));
   const [todayIdea, setTodayIdea] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchTodayIdea = async () => {
       try {
         setLoading(true);
-        const idea = await dataService.getIdeaOfTheDay();
-        setTodayIdea(idea);
+        // Try to get enhanced ideas first
+        const enhancedIdeas = await authService.getEnhancedIdeas({ limit: 1, sort_by: 'validation_score' });
+        if (enhancedIdeas && enhancedIdeas.length > 0) {
+          setTodayIdea(enhancedIdeas[0]);
+        } else {
+          // Fallback to original data service
+          const idea = await dataService.getIdeaOfTheDay();
+          setTodayIdea(idea);
+        }
       } catch (error) {
         console.error('Error fetching idea:', error);
         // Fallback to default idea
@@ -654,138 +663,256 @@ export const HomePage = () => {
     fetchTodayIdea();
   }, []);
 
+  const handleVote = async (ideaId, voteData) => {
+    if (!isAuthenticated) {
+      setAuthModalOpen(true);
+      return;
+    }
+
+    try {
+      await authService.voteOnIdea(ideaId, voteData);
+      // Refresh the idea to show updated scores
+      const updatedIdea = await authService.getIdeaDetails(ideaId);
+      setTodayIdea(updatedIdea);
+    } catch (error) {
+      console.error('Error voting:', error);
+      throw error;
+    }
+  };
+
+  const handleComment = async (ideaId, content) => {
+    if (!isAuthenticated) {
+      setAuthModalOpen(true);
+      return;
+    }
+
+    try {
+      await authService.commentOnIdea(ideaId, content);
+      // Refresh the idea to show updated comments
+      const updatedIdea = await authService.getIdeaDetails(ideaId);
+      setTodayIdea(updatedIdea);
+    } catch (error) {
+      console.error('Error commenting:', error);
+      throw error;
+    }
+  };
+
+  const refreshIdea = async () => {
+    setLoading(true);
+    try {
+      const enhancedIdeas = await authService.getEnhancedIdeas({ limit: 5, sort_by: 'created_at' });
+      if (enhancedIdeas && enhancedIdeas.length > 0) {
+        // Get a random idea from the latest 5
+        const randomIdea = enhancedIdeas[Math.floor(Math.random() * enhancedIdeas.length)];
+        setTodayIdea(randomIdea);
+      } else {
+        const idea = await dataService.getIdeaOfTheDay();
+        setTodayIdea(idea);
+      }
+    } catch (error) {
+      console.error('Error refreshing idea:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <section 
-        className="relative bg-gradient-to-br from-blue-600 to-purple-700 text-white py-20"
-        style={{
-          backgroundImage: `linear-gradient(rgba(37, 99, 235, 0.8), rgba(124, 58, 237, 0.8)), url('https://images.unsplash.com/photo-1588856122867-363b0aa7f598?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwxfHxzdGFydHVwJTIwaWRlYXN8ZW58MHx8fGJsdWV8MTc1MzI1NTk1MHww&ixlib=rb-4.1.0&q=85')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 inline-flex items-center mb-6">
-            <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-            <span className="text-sm font-medium">The #1 Software to Spot Trends and Startup Ideas Worth Building</span>
-            <button className="ml-3 w-8 h-8 bg-black/20 rounded-full flex items-center justify-center">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Idea of the Day Section */}
-      <section className="py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-blue-600 mb-6">Idea of the Day</h1>
+    <>
+      <div className="min-h-screen bg-gray-50">
+        {/* Hero Section */}
+        <section 
+          className="relative bg-gradient-to-br from-blue-600 to-purple-700 text-white py-20"
+          style={{
+            backgroundImage: `linear-gradient(rgba(37, 99, 235, 0.8), rgba(124, 58, 237, 0.8)), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><radialGradient id="a" cx="0" cy="0" r="1"><stop offset="0%25" stop-color="%2337a2eb"/><stop offset="100%25" stop-color="%23ff6b6b"/></radialGradient></defs><rect width="100%25" height="100%25" fill="url(%23a)"/><g><circle cx="200" cy="200" r="4" fill="%23ffffff" opacity="0.3"/><circle cx="800" cy="150" r="3" fill="%23ffffff" opacity="0.2"/><circle cx="600" cy="300" r="5" fill="%23ffffff" opacity="0.4"/><circle cx="300" cy="800" r="3" fill="%23ffffff" opacity="0.3"/><circle cx="900" cy="700" r="4" fill="%23ffffff" opacity="0.2"/></g></svg>')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 inline-flex items-center mb-6">
+              <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+              <span className="text-sm font-medium">
+                The #1 Software to Spot Trends and Startup Ideas Worth Building
+              </span>
+            </div>
             
-            <div className="flex items-center justify-center space-x-6 text-gray-600 mb-8">
-              <button className="flex items-center hover:text-blue-600 transition-colors">
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Previous
-              </button>
+            <h1 className="text-4xl md:text-6xl font-bold mb-6">
+              Discover & Validate
+              <span className="block bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
+                Startup Ideas
+              </span>
+            </h1>
+            
+            <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto opacity-90">
+              Join thousands of entrepreneurs using real-time data and community validation to find their next big opportunity
+            </p>
+
+            {!isAuthenticated && (
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button
+                  onClick={() => setAuthModalOpen(true)}
+                  className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors"
+                >
+                  Get Started Free
+                </button>
+                <button className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-blue-600 transition-colors">
+                  Watch Demo
+                </button>
+              </div>
+            )}
+
+            {isAuthenticated && (
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 max-w-md mx-auto">
+                <p className="text-lg mb-2">Welcome back, {user?.full_name}!</p>
+                <p className="text-sm opacity-80">
+                  🏆 You have {user?.reputation_score || 0} reputation points
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Idea of the Day Section */}
+        <section className="py-16">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h1 className="text-4xl md:text-5xl font-bold text-blue-600 mb-6">
+                {todayIdea?.validation_score > 0 ? 'Top Validated Idea' : 'Idea of the Day'}
+              </h1>
               
-              <div className="flex items-center bg-gray-100 rounded-lg px-4 py-2">
-                <svg className="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span className="font-medium">{currentDate}</span>
+              <div className="flex items-center justify-center space-x-6 text-gray-600 mb-8">
+                <button className="flex items-center hover:text-blue-600 transition-colors">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Previous
+                </button>
+                
+                <div className="flex items-center bg-gray-100 rounded-lg px-4 py-2">
+                  <svg className="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className="font-medium">{currentDate}</span>
+                </div>
+                
+                <button 
+                  onClick={refreshIdea}
+                  className="flex items-center hover:text-blue-600 transition-colors"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh Idea
+                </button>
+              </div>
+            </div>
+
+            {todayIdea && !loading && (
+              <EnhancedIdeaCard
+                idea={todayIdea}
+                onVote={handleVote}
+                onComment={handleComment}
+                currentUser={user}
+              />
+            )}
+
+            {/* Loading State */}
+            {loading && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 animate-pulse">
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="h-6 bg-gray-200 rounded-full w-20"></div>
+                  <div className="h-6 bg-gray-200 rounded-full w-24"></div>
+                  <div className="h-6 bg-gray-200 rounded-full w-16"></div>
+                </div>
+                <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                </div>
+              </div>
+            )}
+
+            {/* Community Validation Badge */}
+            {todayIdea && !loading && (
+              <div className="text-center mt-6">
+                <div className="inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-full">
+                  <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                  <span className="text-green-800 text-sm font-medium">
+                    {todayIdea.validation_score > 0 
+                      ? `${todayIdea.validation_score}% Community Validated`
+                      : 'Live data from HackerNews & GitHub'
+                    }
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Enhanced Features Section */}
+        <section className="py-16 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                Real-World Validation Features
+              </h2>
+              <p className="text-xl text-gray-600">
+                Everything you need to validate and implement your next big idea
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Community Validation</h3>
+                <p className="text-gray-600">Get real feedback from entrepreneurs on feasibility, market potential, and interest</p>
               </div>
               
-              <button 
-                onClick={async () => {
-                  setLoading(true);
-                  const idea = await dataService.getIdeaOfTheDay();
-                  setTodayIdea(idea);
-                  setLoading(false);
-                }}
-                className="flex items-center hover:text-blue-600 transition-colors"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Refresh Idea
-              </button>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Implementation Guides</h3>
+                <p className="text-gray-600">Step-by-step roadmaps with timelines, budgets, and required skills</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Real-Time Data</h3>
+                <p className="text-gray-600">Live insights from HackerNews, GitHub trends, and market analysis</p>
+              </div>
+              
+              <div className="text-center">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Community Network</h3>
+                <p className="text-gray-600">Connect with like-minded entrepreneurs and potential co-founders</p>
+              </div>
             </div>
           </div>
+        </section>
+      </div>
 
-          {todayIdea && !loading && <IdeaCard idea={todayIdea} />}
-
-          {/* Loading State */}
-          {loading && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 animate-pulse">
-              <div className="flex flex-wrap gap-2 mb-4">
-                <div className="h-6 bg-gray-200 rounded-full w-20"></div>
-                <div className="h-6 bg-gray-200 rounded-full w-24"></div>
-                <div className="h-6 bg-gray-200 rounded-full w-16"></div>
-              </div>
-              <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-full"></div>
-                <div className="h-4 bg-gray-200 rounded w-full"></div>
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              </div>
-            </div>
-          )}
-
-          {/* Real-time Data Badge */}
-          {todayIdea && !loading && (
-            <div className="text-center mt-6">
-              <div className="inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-full">
-                <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                <span className="text-green-800 text-sm font-medium">
-                  Live data from HackerNews & GitHub
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">AI-Powered Research</h3>
-              <p className="text-gray-600">Get data-driven insights on market trends and startup opportunities</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Trend Analysis</h3>
-              <p className="text-gray-600">Track emerging market trends and growth opportunities</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Founder-Fit Assessment</h3>
-              <p className="text-gray-600">Match business ideas based on your skills and resources</p>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode="register"
+      />
+    </>
   );
 };
 
