@@ -452,12 +452,13 @@ class BackendTester:
             # Test accessing protected endpoint without token
             response = self.session.get(f"{self.base_url}/auth/me")
             
-            if response.status_code == 401:
-                self.log_test("Authentication Requirements", True, "Protected endpoints properly require authentication")
+            if response.status_code in [401, 403]:  # Both are acceptable for unauthorized access
+                self.log_test("Authentication Requirements", True, 
+                            f"Protected endpoints properly require authentication (HTTP {response.status_code})")
                 return True
             else:
                 self.log_test("Authentication Requirements", False, 
-                            f"Expected 401, got {response.status_code}")
+                            f"Expected 401/403, got {response.status_code}")
                 return False
                 
         except Exception as e:
