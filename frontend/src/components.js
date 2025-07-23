@@ -315,7 +315,7 @@ export const HomePage = () => {
             </div>
           </div>
 
-          <IdeaCard idea={todayIdea} />
+          {todayIdea && !loading && <IdeaCard idea={todayIdea} />}
 
           {/* Loading State */}
           {loading && (
