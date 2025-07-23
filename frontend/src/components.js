@@ -14,7 +14,7 @@ export const Header = () => {
               <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center mr-3">
                 <span className="text-white font-bold text-sm">IB</span>
               </div>
-              <span className="text-xl font-semibold text-gray-900">ideabrowser.com</span>
+              <span className="text-xl font-semibold text-gray-900">ideahero.com</span>
             </div>
           </div>
 
