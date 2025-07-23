@@ -490,6 +490,223 @@ class BackendTester:
             self.log_test("Input Validation", False, f"Exception: {str(e)}")
             return False
     
+    def test_user_dashboard_authentication(self):
+        """Test that user dashboard endpoint requires authentication"""
+        try:
+            # Test without authentication
+            response = self.session.get(f"{self.base_url}/user/dashboard")
+            
+            if response.status_code in [401, 403]:
+                self.log_test("User Dashboard Authentication", True, 
+                            f"Dashboard properly requires authentication (HTTP {response.status_code})")
+                return True
+            else:
+                self.log_test("User Dashboard Authentication", False, 
+                            f"Expected 401/403, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("User Dashboard Authentication", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_user_dashboard_data(self):
+        """Test user dashboard endpoint returns comprehensive user stats"""
+        try:
+            if not self.auth_token:
+                self.log_test("User Dashboard Data", False, "No auth token available")
+                return False
+            
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response = self.session.get(f"{self.base_url}/user/dashboard", headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check required top-level structure
+                required_sections = ["user_stats", "recent_activity", "engagement_summary"]
+                if not all(section in data for section in required_sections):
+                    missing = [s for s in required_sections if s not in data]
+                    self.log_test("User Dashboard Data", False, f"Missing sections: {missing}")
+                    return False
+                
+                # Check user_stats structure
+                user_stats = data["user_stats"]
+                required_stats = ["total_votes", "total_comments", "upvotes_given", "downvotes_given", 
+                                "reputation_score", "member_since", "favorite_categories"]
+                if not all(stat in user_stats for stat in required_stats):
+                    missing = [s for s in required_stats if s not in user_stats]
+                    self.log_test("User Dashboard Data", False, f"Missing user stats: {missing}")
+                    return False
+                
+                # Check recent_activity structure
+                recent_activity = data["recent_activity"]
+                required_activity = ["voted_ideas", "commented_ideas"]
+                if not all(activity in recent_activity for activity in required_activity):
+                    missing = [a for a in required_activity if a not in recent_activity]
+                    self.log_test("User Dashboard Data", False, f"Missing activity data: {missing}")
+                    return False
+                
+                # Check engagement_summary structure
+                engagement = data["engagement_summary"]
+                required_engagement = ["total_interactions", "vote_ratio", "active_days"]
+                if not all(metric in engagement for metric in required_engagement):
+                    missing = [m for m in required_engagement if m not in engagement]
+                    self.log_test("User Dashboard Data", False, f"Missing engagement metrics: {missing}")
+                    return False
+                
+                # Verify data types and values
+                if (isinstance(user_stats["total_votes"], int) and
+                    isinstance(user_stats["total_comments"], int) and
+                    isinstance(user_stats["reputation_score"], int) and
+                    isinstance(user_stats["favorite_categories"], list) and
+                    isinstance(recent_activity["voted_ideas"], list) and
+                    isinstance(recent_activity["commented_ideas"], list) and
+                    isinstance(engagement["total_interactions"], int)):
+                    
+                    self.log_test("User Dashboard Data", True, 
+                                f"Dashboard data structure valid - {user_stats['total_votes']} votes, "
+                                f"{user_stats['total_comments']} comments, "
+                                f"reputation: {user_stats['reputation_score']}")
+                    return True
+                else:
+                    self.log_test("User Dashboard Data", False, "Invalid data types in response")
+                    return False
+            else:
+                self.log_test("User Dashboard Data", False, f"HTTP {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("User Dashboard Data", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_user_analytics_authentication(self):
+        """Test that user analytics endpoint requires authentication"""
+        try:
+            # Test without authentication
+            response = self.session.get(f"{self.base_url}/user/analytics")
+            
+            if response.status_code in [401, 403]:
+                self.log_test("User Analytics Authentication", True, 
+                            f"Analytics properly requires authentication (HTTP {response.status_code})")
+                return True
+            else:
+                self.log_test("User Analytics Authentication", False, 
+                            f"Expected 401/403, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("User Analytics Authentication", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_user_analytics_data(self):
+        """Test user analytics endpoint returns chart-ready data"""
+        try:
+            if not self.auth_token:
+                self.log_test("User Analytics Data", False, "No auth token available")
+                return False
+            
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response = self.session.get(f"{self.base_url}/user/analytics", headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check required structure for analytics
+                required_fields = ["activity_timeline", "category_distribution", "score_distribution", "total_interactions"]
+                if not all(field in data for field in required_fields):
+                    missing = [f for f in required_fields if f not in data]
+                    self.log_test("User Analytics Data", False, f"Missing analytics fields: {missing}")
+                    return False
+                
+                # Verify data structure for charts
+                activity_timeline = data["activity_timeline"]
+                category_distribution = data["category_distribution"]
+                score_distribution = data["score_distribution"]
+                
+                # Check that timeline data has proper structure
+                if isinstance(activity_timeline, list):
+                    if len(activity_timeline) > 0:
+                        timeline_item = activity_timeline[0]
+                        required_timeline_fields = ["month", "votes", "comments", "total"]
+                        if not all(field in timeline_item for field in required_timeline_fields):
+                            missing = [f for f in required_timeline_fields if f not in timeline_item]
+                            self.log_test("User Analytics Data", False, f"Missing timeline fields: {missing}")
+                            return False
+                
+                # Check category distribution structure
+                if isinstance(category_distribution, list):
+                    if len(category_distribution) > 0:
+                        cat_item = category_distribution[0]
+                        if not ("category" in cat_item and "count" in cat_item):
+                            self.log_test("User Analytics Data", False, "Invalid category distribution structure")
+                            return False
+                
+                # Check score distribution structure
+                if isinstance(score_distribution, list):
+                    if len(score_distribution) > 0:
+                        score_item = score_distribution[0]
+                        if not ("score" in score_item and "count" in score_item):
+                            self.log_test("User Analytics Data", False, "Invalid score distribution structure")
+                            return False
+                
+                # Verify total_interactions is a number
+                if isinstance(data["total_interactions"], int):
+                    self.log_test("User Analytics Data", True, 
+                                f"Analytics data structure valid - {len(activity_timeline)} timeline entries, "
+                                f"{len(category_distribution)} categories, "
+                                f"{data['total_interactions']} total interactions")
+                    return True
+                else:
+                    self.log_test("User Analytics Data", False, "Invalid total_interactions type")
+                    return False
+            else:
+                self.log_test("User Analytics Data", False, f"HTTP {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("User Analytics Data", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_dashboard_analytics_integration(self):
+        """Test that dashboard and analytics data is consistent"""
+        try:
+            if not self.auth_token:
+                self.log_test("Dashboard Analytics Integration", False, "No auth token available")
+                return False
+            
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            
+            # Get both dashboard and analytics data
+            dashboard_response = self.session.get(f"{self.base_url}/user/dashboard", headers=headers)
+            analytics_response = self.session.get(f"{self.base_url}/user/analytics", headers=headers)
+            
+            if dashboard_response.status_code == 200 and analytics_response.status_code == 200:
+                dashboard_data = dashboard_response.json()
+                analytics_data = analytics_response.json()
+                
+                # Check that total interactions match between dashboard and analytics
+                dashboard_interactions = dashboard_data["engagement_summary"]["total_interactions"]
+                analytics_interactions = analytics_data["total_interactions"]
+                
+                if dashboard_interactions == analytics_interactions:
+                    self.log_test("Dashboard Analytics Integration", True, 
+                                f"Data consistency verified - {dashboard_interactions} total interactions")
+                    return True
+                else:
+                    self.log_test("Dashboard Analytics Integration", False, 
+                                f"Interaction count mismatch - Dashboard: {dashboard_interactions}, "
+                                f"Analytics: {analytics_interactions}")
+                    return False
+            else:
+                self.log_test("Dashboard Analytics Integration", False, 
+                            f"Failed to fetch data - Dashboard: {dashboard_response.status_code}, "
+                            f"Analytics: {analytics_response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Dashboard Analytics Integration", False, f"Exception: {str(e)}")
+            return False
+    
     def run_all_tests(self):
         """Run all backend tests in priority order"""
         print("=" * 60)
