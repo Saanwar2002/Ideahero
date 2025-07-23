@@ -208,6 +208,220 @@ def calculate_idea_scores(votes: List[IdeaVote]) -> Dict[str, float]:
         "avg_market_potential": round(avg_market_potential, 1),
         "avg_interest": round(avg_interest, 1)
     }
+# Authentication Routes
+@api_router.post("/auth/register", response_model=Token)
+async def register_user(user_data: UserCreate):
+    # Validate email format
+    if not validate_email(user_data.email):
+        raise HTTPException(status_code=400, detail="Invalid email format")
+    
+    # Validate password strength
+    if not validate_password(user_data.password):
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
+    
+    # Check if user already exists
+    existing_user = await db.users.find_one({"email": user_data.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Create new user
+    hashed_password = get_password_hash(user_data.password)
+    user = User(
+        email=user_data.email,
+        full_name=user_data.full_name,
+        skills=user_data.skills,
+        interests=user_data.interests,
+        experience_level=user_data.experience_level
+    )
+    
+    user_dict = user.dict()
+    user_dict["hashed_password"] = hashed_password
+    
+    await db.users.insert_one(user_dict)
+    
+    # Create access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.id}, expires_delta=access_token_expires
+    )
+    
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        user=UserResponse(**user.dict())
+    )
+
+@api_router.post("/auth/login", response_model=Token)
+async def login_user(user_credentials: UserLogin):
+    # Find user by email
+    user_doc = await db.users.find_one({"email": user_credentials.email})
+    if not user_doc:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Verify password
+    if not verify_password(user_credentials.password, user_doc.get("hashed_password", "")):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Create access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user_doc["id"]}, expires_delta=access_token_expires
+    )
+    
+    user = User(**user_doc)
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        user=UserResponse(**user.dict())
+    )
+
+@api_router.get("/auth/me", response_model=UserResponse)
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
+    return UserResponse(**current_user.dict())
+
+@api_router.put("/auth/profile", response_model=UserResponse)
+async def update_user_profile(
+    profile_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    # Update allowed fields
+    allowed_fields = ["full_name", "skills", "interests", "experience_level"]
+    update_data = {k: v for k, v in profile_data.items() if k in allowed_fields}
+    
+    if update_data:
+        await db.users.update_one(
+            {"id": current_user.id},
+            {"$set": update_data}
+        )
+    
+    # Get updated user
+    updated_user = await db.users.find_one({"id": current_user.id})
+    return UserResponse(**User(**updated_user).dict())
+
+# Idea Routes
+@api_router.post("/ideas/{idea_id}/vote")
+async def vote_on_idea(
+    idea_id: str,
+    vote_data: VoteCreate,
+    current_user: User = Depends(get_current_user)
+):
+    # Validate scores
+    for score in [vote_data.feasibility_score, vote_data.market_potential_score, vote_data.interest_score]:
+        if score < 1 or score > 5:
+            raise HTTPException(status_code=400, detail="Scores must be between 1 and 5")
+    
+    # Check if idea exists
+    idea = await db.ideas.find_one({"id": idea_id})
+    if not idea:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    
+    # Create vote object
+    vote = IdeaVote(
+        user_id=current_user.id,
+        vote_type=vote_data.vote_type,
+        feasibility_score=vote_data.feasibility_score,
+        market_potential_score=vote_data.market_potential_score,
+        interest_score=vote_data.interest_score
+    )
+    
+    # Remove existing vote from this user if exists
+    await db.ideas.update_one(
+        {"id": idea_id},
+        {"$pull": {"votes": {"user_id": current_user.id}}}
+    )
+    
+    # Add new vote
+    await db.ideas.update_one(
+        {"id": idea_id},
+        {"$push": {"votes": vote.dict()}}
+    )
+    
+    # Update user reputation
+    reputation_change = 2 if vote_data.vote_type == "upvote" else 1
+    await db.users.update_one(
+        {"id": current_user.id},
+        {"$inc": {"reputation_score": reputation_change}}
+    )
+    
+    # Recalculate idea scores
+    updated_idea = await db.ideas.find_one({"id": idea_id})
+    scores = calculate_idea_scores([IdeaVote(**v) for v in updated_idea.get("votes", [])])
+    
+    await db.ideas.update_one(
+        {"id": idea_id},
+        {"$set": scores}
+    )
+    
+    return {"message": "Vote recorded successfully", "scores": scores}
+
+@api_router.post("/ideas/{idea_id}/comment")
+async def comment_on_idea(
+    idea_id: str,
+    comment_data: CommentCreate,
+    current_user: User = Depends(get_current_user)
+):
+    # Check if idea exists
+    idea = await db.ideas.find_one({"id": idea_id})
+    if not idea:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    
+    # Create comment
+    comment = IdeaComment(
+        user_id=current_user.id,
+        user_name=current_user.full_name,
+        content=comment_data.content.strip()
+    )
+    
+    if len(comment.content) < 10:
+        raise HTTPException(status_code=400, detail="Comment must be at least 10 characters long")
+    
+    # Add comment to idea
+    await db.ideas.update_one(
+        {"id": idea_id},
+        {"$push": {"comments": comment.dict()}}
+    )
+    
+    # Update user reputation
+    await db.users.update_one(
+        {"id": current_user.id},
+        {"$inc": {"reputation_score": 1}}
+    )
+    
+    return {"message": "Comment added successfully", "comment": comment.dict()}
+
+@api_router.get("/ideas", response_model=List[EnhancedIdea])
+async def get_all_ideas(
+    category: Optional[str] = None,
+    sort_by: str = "validation_score",  # validation_score, created_at, total_votes
+    limit: int = 20,
+    skip: int = 0
+):
+    query = {}
+    if category and category != "All":
+        query["category"] = category
+    
+    # Sort options
+    sort_field = "validation_score"
+    sort_order = -1  # Descending
+    
+    if sort_by == "created_at":
+        sort_field = "created_at" 
+    elif sort_by == "total_votes":
+        sort_field = "total_votes"
+    
+    ideas = await db.ideas.find(query).sort(sort_field, sort_order).skip(skip).limit(limit).to_list(limit)
+    
+    return [EnhancedIdea(**idea) for idea in ideas]
+
+@api_router.get("/ideas/{idea_id}", response_model=EnhancedIdea)
+async def get_idea_details(idea_id: str):
+    idea = await db.ideas.find_one({"id": idea_id})
+    if not idea:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    
+    return EnhancedIdea(**idea)
+
+# Add your existing routes
 @api_router.get("/")
 async def root():
     return {"message": "Hello World"}
