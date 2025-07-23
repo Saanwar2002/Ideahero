@@ -226,6 +226,38 @@ class AuthService {
       throw error;
     }
   }
+
+  // Get user dashboard data
+  async getUserDashboard() {
+    try {
+      const response = await this.authenticatedFetch('/api/user/dashboard');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Dashboard error:', error);
+      throw error;
+    }
+  }
+
+  // Get user analytics data
+  async getUserAnalytics() {
+    try {
+      const response = await this.authenticatedFetch('/api/user/analytics');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch analytics data');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Analytics error:', error);
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance
