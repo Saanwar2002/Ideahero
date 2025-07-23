@@ -179,17 +179,35 @@ export const HomePage = () => {
     month: 'short', 
     day: 'numeric' 
   }));
+  const [todayIdea, setTodayIdea] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const todayIdea = {
-    title: "Transparent HVAC Pricing Platform - End Quote Anxiety For Homeowners",
-    description: "Homeowners dread HVAC repairs because of unpredictable pricing and questionable quotes. TruPrice HVAC transforms this experience with transparent, real-time pricing that eliminates the uncertainty and mistrust. The platform shows exact costs for parts, labor, and service fees before you commit to anything. For homeowners, it means no more anxiety about getting ripped off or struggling to compare wildly different quotes. For HVAC companies, it's a way to build trust instantly and close deals faster with customers who appreciate honesty. The app gives homeowners detailed breakdowns of what each service should cost based on make, model, and problem diagnosis. HVAC providers who join the platform commit to transparency standards and consistent pricing. You can browse service history from local providers, see what others paid for similar repairs, and book with confidence knowing the final bill won't shock you.",
-    tags: [
-      { label: "Perfect Timing", type: "timing", icon: "⏰" },
-      { label: "Unfair Advantage", type: "advantage", icon: "⚡" },
-      { label: "Product Ready", type: "ready", icon: "✅" }
-    ],
-    moreCount: 16
-  };
+  useEffect(() => {
+    const fetchTodayIdea = async () => {
+      try {
+        setLoading(true);
+        const idea = await dataService.getIdeaOfTheDay();
+        setTodayIdea(idea);
+      } catch (error) {
+        console.error('Error fetching idea:', error);
+        // Fallback to default idea
+        setTodayIdea({
+          title: "Transparent HVAC Pricing Platform - End Quote Anxiety For Homeowners",
+          description: "Homeowners dread HVAC repairs because of unpredictable pricing and questionable quotes. TruPrice HVAC transforms this experience with transparent, real-time pricing that eliminates the uncertainty and mistrust. The platform shows exact costs for parts, labor, and service fees before you commit to anything. For homeowners, it means no more anxiety about getting ripped off or struggling to compare wildly different quotes. For HVAC companies, it's a way to build trust instantly and close deals faster with customers who appreciate honesty.",
+          tags: [
+            { label: "Perfect Timing", type: "timing", icon: "⏰" },
+            { label: "Unfair Advantage", type: "advantage", icon: "⚡" },
+            { label: "Product Ready", type: "ready", icon: "✅" }
+          ],
+          moreCount: 16
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTodayIdea();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
