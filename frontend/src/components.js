@@ -425,10 +425,42 @@ export const TrendsPage = () => {
 
         {/* Trends Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTrends.map((trend, index) => (
-            <TrendCard key={index} trend={trend} />
-          ))}
+          {loading ? (
+            // Loading skeleton
+            Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <div className="h-6 bg-gray-200 rounded w-32 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-24"></div>
+                  </div>
+                  <div className="text-right">
+                    <div className="h-8 bg-gray-200 rounded w-16 mb-1"></div>
+                    <div className="h-4 bg-gray-200 rounded w-12"></div>
+                  </div>
+                </div>
+                <div className="h-24 bg-gray-200 rounded-lg mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded w-full"></div>
+              </div>
+            ))
+          ) : (
+            filteredTrends.map((trend, index) => (
+              <TrendCard key={index} trend={trend} />
+            ))
+          )}
         </div>
+
+        {/* Real-time Data Status */}
+        {!loading && trends.length > 0 && (
+          <div className="text-center mt-8">
+            <div className="inline-flex items-center px-4 py-2 bg-blue-50 border border-blue-200 rounded-full">
+              <div className="w-2 h-2 bg-blue-400 rounded-full mr-2 animate-pulse"></div>
+              <span className="text-blue-800 text-sm font-medium">
+                Live trends from GitHub repositories
+              </span>
+            </div>
+          </div>
+        )}
 
         {filteredTrends.length === 0 && (
           <div className="text-center py-12">
