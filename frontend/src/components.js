@@ -568,10 +568,41 @@ export const IdeasPage = () => {
 
         {/* Ideas Grid */}
         <div className="grid lg:grid-cols-2 gap-6">
-          {filteredIdeas.map(idea => (
-            <IdeaCard key={idea.id} idea={idea} />
-          ))}
+          {loading ? (
+            // Loading skeleton
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse">
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="h-6 bg-gray-200 rounded-full w-20"></div>
+                  <div className="h-6 bg-gray-200 rounded-full w-24"></div>
+                  <div className="h-6 bg-gray-200 rounded-full w-16"></div>
+                </div>
+                <div className="h-6 bg-gray-200 rounded w-3/4 mb-3"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                </div>
+              </div>
+            ))
+          ) : (
+            filteredIdeas.map(idea => (
+              <IdeaCard key={idea.id} idea={idea} />
+            ))
+          )}
         </div>
+
+        {/* Real-time Data Status */}
+        {!loading && ideas.length > 0 && (
+          <div className="text-center mt-8">
+            <div className="inline-flex items-center px-4 py-2 bg-orange-50 border border-orange-200 rounded-full">
+              <div className="w-2 h-2 bg-orange-400 rounded-full mr-2 animate-pulse"></div>
+              <span className="text-orange-800 text-sm font-medium">
+                Live business ideas from HackerNews community
+              </span>
+            </div>
+          </div>
+        )}
 
         {filteredIdeas.length === 0 && (
           <div className="text-center py-12">
