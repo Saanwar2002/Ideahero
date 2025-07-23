@@ -49,6 +49,91 @@ class StatusCheck(BaseModel):
 class StatusCheckCreate(BaseModel):
     client_name: str
 
+# User Models
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: str
+    skills: List[str] = []
+    interests: List[str] = []
+    experience_level: str = "beginner"  # beginner, intermediate, advanced
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class User(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: str
+    full_name: str
+    skills: List[str] = []
+    interests: List[str] = []
+    experience_level: str = "beginner"
+    reputation_score: int = 0
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    is_active: bool = True
+
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    full_name: str
+    skills: List[str]
+    interests: List[str]
+    experience_level: str
+    reputation_score: int
+    created_at: datetime
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserResponse
+
+# Idea Models
+class IdeaVote(BaseModel):
+    user_id: str
+    vote_type: str  # upvote, downvote
+    feasibility_score: int  # 1-5
+    market_potential_score: int  # 1-5
+    interest_score: int  # 1-5
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class IdeaComment(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    user_name: str
+    content: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    likes: int = 0
+
+class EnhancedIdea(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    description: str
+    tags: List[Dict[str, Any]] = []
+    category: str
+    source: str = "HackerNews"
+    source_url: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    votes: List[IdeaVote] = []
+    comments: List[IdeaComment] = []
+    implementation_guide: Optional[Dict[str, Any]] = None
+    validation_score: float = 0.0
+    total_votes: int = 0
+    avg_feasibility: float = 0.0
+    avg_market_potential: float = 0.0
+    avg_interest: float = 0.0
+
+class VoteCreate(BaseModel):
+    idea_id: str
+    vote_type: str
+    feasibility_score: int
+    market_potential_score: int
+    interest_score: int
+
+class CommentCreate(BaseModel):
+    idea_id: str
+    content: str
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
