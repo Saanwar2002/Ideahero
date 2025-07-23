@@ -1284,7 +1284,23 @@ class BackendTester:
             ("User Dashboard Data", self.test_user_dashboard_data),
             ("User Analytics Authentication", self.test_user_analytics_authentication),
             ("User Analytics Data", self.test_user_analytics_data),
-            ("Dashboard Analytics Integration", self.test_dashboard_analytics_integration)
+            ("Dashboard Analytics Integration", self.test_dashboard_analytics_integration),
+            # Idea Submission System Tests
+            ("Idea Submission Authentication", self.test_idea_submission_authentication),
+            ("Idea Submission Valid Data", self.test_idea_submission_valid_data),
+            ("Idea Submission Reputation Increase", self.test_idea_submission_reputation_increase),
+            ("User Submitted Ideas Authentication", self.test_user_submitted_ideas_authentication),
+            ("User Submitted Ideas Data", self.test_user_submitted_ideas_data),
+            ("Submitted Idea Details Authentication", self.test_submitted_idea_details_authentication),
+            ("Submitted Idea Details Data", self.test_submitted_idea_details_data),
+            ("Submitted Idea Details 404", self.test_submitted_idea_details_404),
+            ("Update Submitted Idea Authentication", self.test_update_submitted_idea_authentication),
+            ("Update Submitted Idea Valid", self.test_update_submitted_idea_valid),
+            ("Delete Submitted Idea Authentication", self.test_delete_submitted_idea_authentication),
+            ("Delete Submitted Idea Valid", self.test_delete_submitted_idea_valid),
+            ("Community Ideas Endpoint", self.test_community_ideas_endpoint),
+            ("Community Ideas Filtering Sorting", self.test_community_ideas_filtering_sorting),
+            ("Dashboard Submitted Ideas Integration", self.test_dashboard_submitted_ideas_integration)
         ]
         
         passed = 0
