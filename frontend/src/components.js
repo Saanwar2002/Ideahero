@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { dataService } from './dataService';
 
 // Header Component
 export const Header = () => {
