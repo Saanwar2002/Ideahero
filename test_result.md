@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Test the newly implemented user authentication and idea validation system on IdeaHero.com"
+user_problem_statement: "Make IdeaHero.com more usable and productive by adding enhanced user experience features, dashboard, analytics, and productivity tools"
 
 backend:
   - task: "User Authentication System"
