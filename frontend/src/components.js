@@ -931,145 +931,222 @@ export const TrendsPage = () => {
   );
 };
 
-// IdeasPage Component  
+// IdeasPage Component with Enhanced Validation Features
 export const IdeasPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [sortBy, setSortBy] = useState('validation_score');
   const [ideas, setIdeas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    const fetchIdeas = async () => {
-      try {
-        setLoading(true);
-        const ideasData = await dataService.getAllIdeas();
-        setIdeas(ideasData);
-      } catch (error) {
-        console.error('Error fetching ideas:', error);
-        // Fallback ideas
-        setIdeas([
-          {
-            id: 1,
-            title: "AI-Powered Code Review Assistant",
-            description: "Automated code review tool that uses machine learning to identify bugs, security vulnerabilities, and performance issues before deployment.",
-            tags: [
-              { label: "High Demand", type: "advantage", icon: "🔥" },
-              { label: "Tech Ready", type: "ready", icon: "✅" }
-            ],
-            category: "Technology",
-            moreCount: 8
-          }
-        ]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchIdeas();
-  }, []);
+  }, [selectedCategory, sortBy]);
 
-  const categories = ['All', 'Technology', 'Healthcare', 'Business', 'Sustainability', 'Health & Fitness'];
+  const fetchIdeas = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        category: selectedCategory === 'All' ? '' : selectedCategory,
+        sort_by: sortBy,
+        limit: 20
+      };
+      const ideasData = await authService.getEnhancedIdeas(params);
+      setIdeas(ideasData);
+    } catch (error) {
+      console.error('Error fetching ideas:', error);
+      // Fallback to original data service
+      try {
+        const fallbackIdeas = await dataService.getAllIdeas();
+        setIdeas(fallbackIdeas);
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+        setIdeas([]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVote = async (ideaId, voteData) => {
+    if (!isAuthenticated) {
+      setAuthModalOpen(true);
+      return;
+    }
+
+    try {
+      await authService.voteOnIdea(ideaId, voteData);
+      // Refresh ideas to get updated scores
+      await fetchIdeas();
+    } catch (error) {
+      console.error('Error voting:', error);
+      throw error;
+    }
+  };
+
+  const handleComment = async (ideaId, content) => {
+    if (!isAuthenticated) {
+      setAuthModalOpen(true);
+      return;
+    }
+
+    try {
+      await authService.commentOnIdea(ideaId, content);
+      // Refresh ideas to get updated comments
+      await fetchIdeas();
+    } catch (error) {
+      console.error('Error commenting:', error);
+      throw error;
+    }
+  };
+
+  const categories = ['All', 'Technology', 'Healthcare', 'Business', 'Sustainability', 'Education'];
+  const sortOptions = [
+    { value: 'validation_score', label: '🏆 Highest Validated' },
+    { value: 'total_votes', label: '👥 Most Voted' },
+    { value: 'created_at', label: '🕒 Most Recent' },
+  ];
 
   const filteredIdeas = ideas.filter(idea => {
-    const matchesSearch = idea.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         idea.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || idea.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const matchesSearch = idea.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         idea.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-blue-600 mb-4">Idea Database</h1>
-          <p className="text-xl text-gray-600">Browse validated business opportunities</p>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              placeholder="Search ideas..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <svg className="w-5 h-5 text-gray-400 absolute left-3 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Category Filters */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          {categories.map(category => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedCategory === category
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
-
-        {/* Ideas Grid */}
-        <div className="grid lg:grid-cols-2 gap-6">
-          {loading ? (
-            // Loading skeleton
-            Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse">
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <div className="h-6 bg-gray-200 rounded-full w-20"></div>
-                  <div className="h-6 bg-gray-200 rounded-full w-24"></div>
-                  <div className="h-6 bg-gray-200 rounded-full w-16"></div>
-                </div>
-                <div className="h-6 bg-gray-200 rounded w-3/4 mb-3"></div>
-                <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-full"></div>
-                  <div className="h-4 bg-gray-200 rounded w-full"></div>
-                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                </div>
+    <>
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl md:text-5xl font-bold text-blue-600 mb-4">Idea Database</h1>
+            <p className="text-xl text-gray-600">Community-validated business opportunities with implementation guides</p>
+            {!isAuthenticated && (
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-blue-800">
+                  <button
+                    onClick={() => setAuthModalOpen(true)}
+                    className="text-blue-600 hover:text-blue-800 font-medium underline"
+                  >
+                    Sign up
+                  </button>
+                  {' '}to rate ideas, leave comments, and access implementation guides!
+                </p>
               </div>
-            ))
-          ) : (
-            filteredIdeas.map(idea => (
-              <IdeaCard key={idea.id} idea={idea} />
-            ))
-          )}
-        </div>
-
-        {/* Real-time Data Status */}
-        {!loading && ideas.length > 0 && (
-          <div className="text-center mt-8">
-            <div className="inline-flex items-center px-4 py-2 bg-orange-50 border border-orange-200 rounded-full">
-              <div className="w-2 h-2 bg-orange-400 rounded-full mr-2 animate-pulse"></div>
-              <span className="text-orange-800 text-sm font-medium">
-                Live business ideas from HackerNews community
-              </span>
-            </div>
+            )}
           </div>
-        )}
 
-        {filteredIdeas.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.5-.935-6.072-2.443" />
+          {/* Search and Filters */}
+          <div className="flex flex-col md:flex-row gap-4 mb-8">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="Search ideas..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <svg className="w-5 h-5 text-gray-400 absolute left-3 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No ideas found</h3>
-            <p className="text-gray-600">Try adjusting your search terms or category filter</p>
+            
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {sortOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
+
+          {/* Category Filters */}
+          <div className="flex flex-wrap gap-2 mb-8">
+            {categories.map(category => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  selectedCategory === category
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+
+          {/* Ideas Grid */}
+          <div className="grid lg:grid-cols-2 gap-6">
+            {loading ? (
+              // Loading skeleton
+              Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse">
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <div className="h-6 bg-gray-200 rounded-full w-20"></div>
+                    <div className="h-6 bg-gray-200 rounded-full w-24"></div>
+                    <div className="h-6 bg-gray-200 rounded-full w-16"></div>
+                  </div>
+                  <div className="h-6 bg-gray-200 rounded w-3/4 mb-3"></div>
+                  <div className="space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-full"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              filteredIdeas.map(idea => (
+                <EnhancedIdeaCard
+                  key={idea.id}
+                  idea={idea}
+                  onVote={handleVote}
+                  onComment={handleComment}
+                  currentUser={user}
+                />
+              ))
+            )}
+          </div>
+
+          {/* Real-time Data Status */}
+          {!loading && ideas.length > 0 && (
+            <div className="text-center mt-8">
+              <div className="inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-full">
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                <span className="text-green-800 text-sm font-medium">
+                  Live validation data from our community
+                </span>
+              </div>
+            </div>
+          )}
+
+          {filteredIdeas.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <div className="text-gray-400 mb-4">
+                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.5-.935-6.072-2.443" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No ideas found</h3>
+              <p className="text-gray-600">Try adjusting your search terms or category filter</p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode="register"
+      />
+    </>
   );
 };
 
