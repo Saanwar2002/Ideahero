@@ -421,6 +421,141 @@ async def get_idea_details(idea_id: str):
     
     return EnhancedIdea(**idea)
 
+# User Dashboard & Analytics Endpoints
+@api_router.get("/user/dashboard")
+async def get_user_dashboard(current_user: User = Depends(get_current_user)):
+    """Get comprehensive user dashboard data"""
+    user_id = current_user.id
+    
+    # Get user's voting activity
+    user_votes = await db.ideas.find({"votes.user_id": user_id}).to_list(1000)
+    total_votes = sum(len([vote for vote in idea["votes"] if vote["user_id"] == user_id]) for idea in user_votes)
+    
+    # Get user's comments
+    user_comments = await db.ideas.find({"comments.user_id": user_id}).to_list(1000)
+    total_comments = sum(len([comment for comment in idea["comments"] if comment["user_id"] == user_id]) for idea in user_comments)
+    
+    # Get ideas the user has voted on recently
+    recent_voted_ideas = []
+    for idea in user_votes[-5:]:  # Last 5 ideas voted on
+        user_vote = next((vote for vote in idea["votes"] if vote["user_id"] == user_id), None)
+        if user_vote:
+            recent_voted_ideas.append({
+                "idea_id": idea["id"],
+                "idea_title": idea["title"],
+                "vote_type": user_vote["vote_type"],
+                "voted_at": user_vote["created_at"]
+            })
+    
+    # Get user's commented ideas
+    recent_commented_ideas = []
+    for idea in user_comments[-5:]:  # Last 5 ideas commented on
+        user_comment = next((comment for comment in idea["comments"] if comment["user_id"] == user_id), None)
+        if user_comment:
+            recent_commented_ideas.append({
+                "idea_id": idea["id"],
+                "idea_title": idea["title"],
+                "comment_preview": user_comment["content"][:100] + "..." if len(user_comment["content"]) > 100 else user_comment["content"],
+                "commented_at": user_comment["created_at"]
+            })
+    
+    # Calculate engagement metrics
+    upvotes_given = sum(len([vote for vote in idea["votes"] if vote["user_id"] == user_id and vote["vote_type"] == "upvote"]) for idea in user_votes)
+    downvotes_given = sum(len([vote for vote in idea["votes"] if vote["user_id"] == user_id and vote["vote_type"] == "downvote"]) for idea in user_votes)
+    
+    # Get user's favorite categories (based on voting patterns)
+    category_votes = {}
+    for idea in user_votes:
+        category = idea.get("category", "Other")
+        category_votes[category] = category_votes.get(category, 0) + 1
+    
+    favorite_categories = sorted(category_votes.items(), key=lambda x: x[1], reverse=True)[:3]
+    
+    return {
+        "user_stats": {
+            "total_votes": total_votes,
+            "total_comments": total_comments,
+            "upvotes_given": upvotes_given,
+            "downvotes_given": downvotes_given,
+            "reputation_score": current_user.reputation_score,
+            "member_since": current_user.created_at,
+            "favorite_categories": [{"category": cat, "count": count} for cat, count in favorite_categories]
+        },
+        "recent_activity": {
+            "voted_ideas": recent_voted_ideas,
+            "commented_ideas": recent_commented_ideas
+        },
+        "engagement_summary": {
+            "total_interactions": total_votes + total_comments,
+            "vote_ratio": round(upvotes_given / (upvotes_given + downvotes_given) * 100, 1) if (upvotes_given + downvotes_given) > 0 else 0,
+            "active_days": 0  # TODO: Calculate based on activity dates
+        }
+    }
+
+@api_router.get("/user/analytics")
+async def get_user_analytics(current_user: User = Depends(get_current_user)):
+    """Get user analytics data for charts and graphs"""
+    user_id = current_user.id
+    
+    # Get all ideas the user has interacted with
+    user_ideas = await db.ideas.find({
+        "$or": [
+            {"votes.user_id": user_id},
+            {"comments.user_id": user_id}
+        ]
+    }).to_list(1000)
+    
+    # Prepare data for charts
+    monthly_activity = {}
+    category_distribution = {}
+    score_distribution = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0}
+    
+    for idea in user_ideas:
+        # Process votes
+        user_votes = [vote for vote in idea["votes"] if vote["user_id"] == user_id]
+        for vote in user_votes:
+            vote_date = vote["created_at"]
+            month_key = f"{vote_date.year}-{vote_date.month:02d}"
+            
+            if month_key not in monthly_activity:
+                monthly_activity[month_key] = {"votes": 0, "comments": 0}
+            monthly_activity[month_key]["votes"] += 1
+            
+            # Track category distribution
+            category = idea.get("category", "Other")
+            category_distribution[category] = category_distribution.get(category, 0) + 1
+            
+            # Track score distribution
+            avg_score = round((vote["feasibility_score"] + vote["market_potential_score"] + vote["interest_score"]) / 3)
+            score_distribution[str(avg_score)] += 1
+        
+        # Process comments
+        user_comments = [comment for comment in idea["comments"] if comment["user_id"] == user_id]
+        for comment in user_comments:
+            comment_date = comment["created_at"]
+            month_key = f"{comment_date.year}-{comment_date.month:02d}"
+            
+            if month_key not in monthly_activity:
+                monthly_activity[month_key] = {"votes": 0, "comments": 0}
+            monthly_activity[month_key]["comments"] += 1
+    
+    # Convert to chart-friendly format
+    activity_timeline = []
+    for month, activity in sorted(monthly_activity.items()):
+        activity_timeline.append({
+            "month": month,
+            "votes": activity["votes"],
+            "comments": activity["comments"],
+            "total": activity["votes"] + activity["comments"]
+        })
+    
+    return {
+        "activity_timeline": activity_timeline,
+        "category_distribution": [{"category": cat, "count": count} for cat, count in category_distribution.items()],
+        "score_distribution": [{"score": score, "count": count} for score, count in score_distribution.items()],
+        "total_interactions": sum(activity["votes"] + activity["comments"] for activity in monthly_activity.values())
+    }
+
 # Add your existing routes
 @api_router.get("/")
 async def root():
