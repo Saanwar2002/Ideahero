@@ -159,6 +159,11 @@ export const TrendCard = ({ trend }) => {
           <div className="flex items-center space-x-4 text-sm text-gray-600">
             <span>Volume {trend.volume}</span>
             <span>Growth {trend.growth}</span>
+            {trend.language && (
+              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                {trend.language}
+              </span>
+            )}
           </div>
         </div>
         <div className="text-right">
@@ -186,7 +191,27 @@ export const TrendCard = ({ trend }) => {
         </svg>
       </div>
       
-      <p className="text-gray-600 text-sm">{trend.description}</p>
+      <p className="text-gray-600 text-sm mb-3">{trend.description}</p>
+      
+      {/* GitHub specific info */}
+      {trend.url && (
+        <div className="flex items-center justify-between text-xs text-gray-500 border-t pt-3">
+          <span className="bg-gray-100 px-2 py-1 rounded">
+            {trend.category || 'Technology'}
+          </span>
+          <a 
+            href={trend.url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-800 flex items-center"
+          >
+            View on GitHub 
+            <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+        </div>
+      )}
     </div>
   );
 };
