@@ -125,7 +125,26 @@ export const IdeaCard = ({ idea }) => {
         )}
       </div>
       <h3 className="text-xl font-semibold text-gray-900 mb-3">{idea.title}</h3>
-      <p className="text-gray-600 leading-relaxed">{idea.description}</p>
+      <p className="text-gray-600 leading-relaxed mb-4">{idea.description}</p>
+      
+      {/* Real data indicators */}
+      {idea.source && (
+        <div className="flex items-center justify-between text-sm text-gray-500 border-t pt-3">
+          <div className="flex items-center space-x-4">
+            <span className="flex items-center">
+              🔥 {idea.score || 0} points
+            </span>
+            <span className="flex items-center">
+              💬 {idea.comments || 0} comments
+            </span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+              via {idea.source}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
