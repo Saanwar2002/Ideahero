@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './App.css';
 import { AuthProvider } from './AuthContext';
-import { Header, HomePage, TrendsPage, IdeasPage, PricingPage } from './components';
+import { Header, HomePage, TrendsPage, IdeasPage, PricingPage, UserDashboard } from './components';
 
 function App() {
   return (
