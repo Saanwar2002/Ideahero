@@ -482,81 +482,38 @@ export const TrendsPage = () => {
 export const IdeasPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [ideas, setIdeas] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const ideas = [
-    {
-      id: 1,
-      title: "AI-Powered Code Review Assistant",
-      description: "Automated code review tool that uses machine learning to identify bugs, security vulnerabilities, and performance issues before deployment. Integrates with popular development platforms.",
-      tags: [
-        { label: "High Demand", type: "advantage", icon: "🔥" },
-        { label: "Tech Ready", type: "ready", icon: "✅" },
-        { label: "Growing Market", type: "timing", icon: "📈" }
-      ],
-      category: "Technology",
-      moreCount: 8
-    },
-    {
-      id: 2,
-      title: "Sustainable Food Delivery Packaging",
-      description: "Biodegradable and compostable packaging solutions for food delivery services. Addresses environmental concerns while maintaining food quality and temperature.",
-      tags: [
-        { label: "Perfect Timing", type: "timing", icon: "⏰" },
-        { label: "Eco-Friendly", type: "advantage", icon: "🌱" },
-        { label: "Market Gap", type: "ready", icon: "💡" }
-      ],
-      category: "Sustainability",
-      moreCount: 12
-    },
-    {
-      id: 3,
-      title: "Virtual Reality Fitness Platform",
-      description: "Immersive VR workouts that gamify exercise experiences. Combines entertainment with fitness tracking, making workouts more engaging and effective.",
-      tags: [
-        { label: "Trending Tech", type: "timing", icon: "🚀" },
-        { label: "Health Focus", type: "advantage", icon: "💪" },
-        { label: "Ready to Scale", type: "ready", icon: "📊" }
-      ],
-      category: "Health & Fitness",
-      moreCount: 15
-    },
-    {
-      id: 4,
-      title: "Smart Home Energy Optimizer",
-      description: "AI-driven system that learns household patterns and optimizes energy consumption automatically. Reduces utility bills while maintaining comfort.",
-      tags: [
-        { label: "Cost Savings", type: "advantage", icon: "💰" },
-        { label: "Smart Tech", type: "timing", icon: "🏠" },
-        { label: "Patent Ready", type: "ready", icon: "🔒" }
-      ],
-      category: "Technology",
-      moreCount: 9
-    },
-    {
-      id: 5,
-      title: "Remote Team Culture Platform",
-      description: "Digital platform focused on building and maintaining company culture for remote teams. Includes virtual team building, recognition systems, and culture analytics.",
-      tags: [
-        { label: "Post-Pandemic", type: "timing", icon: "🌐" },
-        { label: "HR Solution", type: "advantage", icon: "👥" },
-        { label: "SaaS Model", type: "ready", icon: "💼" }
-      ],
-      category: "Business",
-      moreCount: 11
-    },
-    {
-      id: 6,
-      title: "Elderly Care Coordination App",
-      description: "Comprehensive platform connecting families, caregivers, and healthcare providers for elderly care management. Includes scheduling, health tracking, and communication tools.",
-      tags: [
-        { label: "Aging Population", type: "timing", icon: "👴" },
-        { label: "Healthcare Need", type: "advantage", icon: "🏥" },
-        { label: "Market Validated", type: "ready", icon: "✅" }
-      ],
-      category: "Healthcare",
-      moreCount: 14
-    }
-  ];
+  useEffect(() => {
+    const fetchIdeas = async () => {
+      try {
+        setLoading(true);
+        const ideasData = await dataService.getAllIdeas();
+        setIdeas(ideasData);
+      } catch (error) {
+        console.error('Error fetching ideas:', error);
+        // Fallback ideas
+        setIdeas([
+          {
+            id: 1,
+            title: "AI-Powered Code Review Assistant",
+            description: "Automated code review tool that uses machine learning to identify bugs, security vulnerabilities, and performance issues before deployment.",
+            tags: [
+              { label: "High Demand", type: "advantage", icon: "🔥" },
+              { label: "Tech Ready", type: "ready", icon: "✅" }
+            ],
+            category: "Technology",
+            moreCount: 8
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchIdeas();
+  }, []);
 
   const categories = ['All', 'Technology', 'Healthcare', 'Business', 'Sustainability', 'Health & Fitness'];
 
