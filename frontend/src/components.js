@@ -7,98 +7,160 @@ import { authService } from './authService';
 // Header Component
 export const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
+  const { user, isAuthenticated, logout } = useAuth();
+
+  const handleAuthClick = (mode) => {
+    setAuthMode(mode);
+    setAuthModalOpen(true);
+  };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <div className="flex items-center">
-            <div className="flex-shrink-0 flex items-center">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center mr-3">
-                <span className="text-white font-bold text-sm">IB</span>
+    <>
+      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <div className="flex items-center">
+              <div className="flex-shrink-0 flex items-center">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center mr-3">
+                  <span className="text-white font-bold text-sm">IH</span>
+                </div>
+                <span className="text-xl font-semibold text-gray-900">ideahero.com</span>
               </div>
-              <span className="text-xl font-semibold text-gray-900">ideahero.com</span>
             </div>
-          </div>
 
-          {/* Navigation */}
-          <nav className="hidden md:flex space-x-8">
-            <a href="/ideas" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors">
-              Idea Database
-            </a>
-            <a href="/trends" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors">
-              Trends
-            </a>
-            <a href="/agent" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors relative">
-              Idea Agent
-              <span className="ml-1 bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full">NEW</span>
-            </a>
-            <a href="/pricing" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors">
-              Pricing
-            </a>
-            <div className="relative group">
-              <button className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors flex items-center">
-                More
-                <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            {/* Navigation */}
+            <nav className="hidden md:flex space-x-8">
+              <a href="/ideas" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors">
+                Idea Database
+              </a>
+              <a href="/trends" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors">
+                Trends
+              </a>
+              <a href="/agent" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors relative">
+                Idea Agent
+                <span className="ml-1 bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full">NEW</span>
+              </a>
+              <a href="/pricing" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors">
+                Pricing
+              </a>
+            </nav>
+
+            {/* Auth Buttons */}
+            <div className="hidden md:flex items-center space-x-4">
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-blue-600 text-sm font-medium">
+                        {user?.full_name?.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-gray-900">{user?.full_name}</span>
+                      <span className="text-xs text-gray-500">
+                        🏆 {user?.reputation_score || 0} points
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={logout}
+                    className="text-gray-700 hover:text-blue-600 px-4 py-2 text-sm font-medium transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleAuthClick('login')}
+                    className="text-gray-700 hover:text-blue-600 px-4 py-2 text-sm font-medium transition-colors"
+                  >
+                    Login
+                  </button>
+                  <button
+                    onClick={() => handleAuthClick('register')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="text-gray-700 hover:text-blue-600 p-2"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
             </div>
-          </nav>
-
-          {/* Auth Buttons */}
-          <div className="hidden md:flex items-center space-x-4">
-            <button className="text-gray-700 hover:text-blue-600 px-4 py-2 text-sm font-medium transition-colors">
-              Login
-            </button>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-              Sign Up
-            </button>
           </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden">
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-700 hover:text-blue-600 p-2"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t">
-              <a href="/ideas" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600">
-                Idea Database
-              </a>
-              <a href="/trends" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600">
-                Trends
-              </a>
-              <a href="/agent" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600">
-                Idea Agent <span className="ml-1 bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full">NEW</span>
-              </a>
-              <a href="/pricing" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600">
-                Pricing
-              </a>
-              <div className="flex space-x-2 px-3 py-2">
-                <button className="text-gray-700 hover:text-blue-600 px-4 py-2 text-sm font-medium">
-                  Login
-                </button>
-                <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                  Sign Up
-                </button>
+          {/* Mobile Menu */}
+          {isMenuOpen && (
+            <div className="md:hidden">
+              <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t">
+                <a href="/ideas" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600">
+                  Idea Database
+                </a>
+                <a href="/trends" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600">
+                  Trends
+                </a>
+                <a href="/agent" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600">
+                  Idea Agent <span className="ml-1 bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full">NEW</span>
+                </a>
+                <a href="/pricing" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600">
+                  Pricing
+                </a>
+                <div className="flex space-x-2 px-3 py-2">
+                  {isAuthenticated ? (
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-sm font-medium text-gray-900">
+                        Welcome, {user?.full_name}
+                      </span>
+                      <button
+                        onClick={logout}
+                        className="text-gray-700 hover:text-blue-600 px-4 py-2 text-sm font-medium"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleAuthClick('login')}
+                        className="text-gray-700 hover:text-blue-600 px-4 py-2 text-sm font-medium"
+                      >
+                        Login
+                      </button>
+                      <button
+                        onClick={() => handleAuthClick('register')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                      >
+                        Sign Up
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
-    </header>
+          )}
+        </div>
+      </header>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode={authMode}
+      />
+    </>
   );
 };
 
