@@ -264,6 +264,35 @@ export const HomePage = () => {
           </div>
 
           <IdeaCard idea={todayIdea} />
+
+          {/* Loading State */}
+          {loading && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 animate-pulse">
+              <div className="flex flex-wrap gap-2 mb-4">
+                <div className="h-6 bg-gray-200 rounded-full w-20"></div>
+                <div className="h-6 bg-gray-200 rounded-full w-24"></div>
+                <div className="h-6 bg-gray-200 rounded-full w-16"></div>
+              </div>
+              <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-full"></div>
+                <div className="h-4 bg-gray-200 rounded w-full"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              </div>
+            </div>
+          )}
+
+          {/* Real-time Data Badge */}
+          {todayIdea && !loading && (
+            <div className="text-center mt-6">
+              <div className="inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-full">
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                <span className="text-green-800 text-sm font-medium">
+                  Live data from HackerNews & GitHub
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
