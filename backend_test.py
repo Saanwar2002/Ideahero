@@ -19,6 +19,7 @@ class BackendTester:
         self.session = requests.Session()
         self.auth_token = None
         self.test_user_id = None
+        self.submitted_idea_id = None  # For idea submission tests
         self.test_results = []
         
     def log_test(self, test_name: str, success: bool, details: str = ""):
