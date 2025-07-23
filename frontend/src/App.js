@@ -1,20 +1,24 @@
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './App.css';
-import { Header, HomePage, TrendsPage, IdeasPage, PricingPage } from './components';
+
+// Simple test component
+const TestPage = () => (
+  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="text-center">
+      <h1 className="text-4xl font-bold text-blue-600 mb-4">IdeaHero.com</h1>
+      <p className="text-xl text-gray-600">Testing React App</p>
+      <div className="mt-8 p-4 bg-white rounded-lg shadow">
+        <p>If you can see this, React is working!</p>
+      </div>
+    </div>
+  </div>
+);
 
 function App() {
   return (
     <div className="App">
-      <BrowserRouter>
-        <Header />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/trends" element={<TrendsPage />} />
-          <Route path="/ideas" element={<IdeasPage />} />
-          <Route path="/pricing" element={<PricingPage />} />
-        </Routes>
-      </BrowserRouter>
+      <TestPage />
     </div>
   );
 }
